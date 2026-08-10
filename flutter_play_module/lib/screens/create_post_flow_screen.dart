@@ -614,7 +614,7 @@ class _CreatePostFlowScreenState extends State<CreatePostFlowScreen> {
         scrolledUnderElevation: 0,
         title: const Text('Create Post', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.chevron_left_rounded, size: 28),
+          icon: const Icon(Icons.chevron_left),
           onPressed: _submitting ? null : _backToEditing,
         ),
       ),
