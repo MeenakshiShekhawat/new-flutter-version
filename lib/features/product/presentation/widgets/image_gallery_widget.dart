@@ -206,9 +206,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
     final screenWidth = MediaQuery.of(context).size.width;
-    final imageHeight = MediaQuery.of(context).size.height * 0.52;
+    final imageHeight = screenWidth;
 
     if (widget.images.isEmpty) {
       return Container(
@@ -274,7 +273,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                         imageUrl: fullUrl,
                         cacheManager: PersistentImageCacheManager.instance,
                         memCacheWidth: 800,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.topCenter,
                         width: double.infinity,
                         height: double.infinity,
                         placeholder: (_, __) => const Center(
@@ -364,7 +364,7 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                 ),
               // Pill dot indicator overlay
               Positioned(
-                bottom: 28,
+                bottom: 36,
                 left: 0,
                 right: 0,
                 child: Center(
@@ -412,3 +412,4 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
     );
   }
 }
+

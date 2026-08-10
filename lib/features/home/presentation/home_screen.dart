@@ -59,6 +59,21 @@ class HomeScreen extends StatefulWidget {
     }
   }
 
+  static void switchTab(int index) {
+    final state = activeState;
+    if (state is _HomeScreenState) {
+      state.switchTab(index);
+    }
+  }
+
+  static int get currentTabBarIndex {
+    final state = activeState;
+    if (state is _HomeScreenState) {
+      return state.currentTab;
+    }
+    return 0;
+  }
+
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -67,6 +82,8 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin, RouteAware {
   int _currentIndex = 0;
   int _previousIndex = 0;
+
+  int get currentTab => _currentIndex;
   // True while a screen (e.g. product details) is pushed on top of Home.
   // Plain Timer.periodic loops (unlike AnimationController tickers) keep
   // firing even while a route is covered/offstage, so this flag is used to
@@ -100,6 +117,21 @@ class _HomeScreenState extends State<HomeScreen>
         _currentIndex = _previousIndex;
       });
       _updateStatusBarColor();
+    }
+  }
+
+  void switchTab(int index) {
+    if (mounted) {
+      setState(() {
+        if (_currentIndex != 2) {
+          _previousIndex = _currentIndex;
+        }
+        _currentIndex = index;
+      });
+      _updateStatusBarColor();
+      if (index == 3) {
+        CartScreen.emitRefreshTabAction();
+      }
     }
   }
 

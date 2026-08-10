@@ -6,6 +6,7 @@ import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/persistent_image_cache_manager.dart';
 import '../../../core/widgets/no_internet_widget.dart';
 import '../../search/presentation/search_screen.dart';
+import '../../../core/state/cart_state.dart';
 import '../data/category_api_service.dart';
 
 class CategoryScreen extends StatefulWidget {
@@ -493,9 +494,9 @@ class _CategoryScreenState extends State<CategoryScreen>
                         onPressed: () => Navigator.of(context)
                             .pushNamed(SearchScreen.routeName),
                         icon: const Icon(
-                          Icons.search_outlined,
-                          color: Colors.black,
-                          size: 24,
+                          Icons.search_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 22,
                         ),
                       ),
                       IconButton(
@@ -513,30 +514,65 @@ class _CategoryScreenState extends State<CategoryScreen>
                           }
                         },
                         icon: const Icon(
-                          Icons.favorite_border_outlined,
-                          color: Colors.black,
-                          size: 24,
+                          Icons.favorite_border_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 20,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('access_token') ?? '';
-                          if (token.isEmpty) {
-                            if (context.mounted) {
-                              Navigator.of(context).pushNamed(AppRoutes.login);
-                            }
-                            return;
-                          }
-                          if (context.mounted) {
-                            Navigator.of(context).pushNamed(AppRoutes.cart);
-                          }
+                      ValueListenableBuilder<int>(
+                        valueListenable: CartState.cartCountNotifier,
+                        builder: (context, cartCount, _) {
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  final token = prefs.getString('access_token') ?? '';
+                                  if (token.isEmpty) {
+                                    if (context.mounted) {
+                                      Navigator.of(context).pushNamed(AppRoutes.login);
+                                    }
+                                    return;
+                                  }
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushNamed(AppRoutes.cart);
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.shopping_cart_outlined,
+                                  color: Color(0xFFDC2626),
+                                  size: 20,
+                                ),
+                              ),
+                              if (cartCount > 0)
+                                Positioned(
+                                  right: 4,
+                                  top: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFDC2626),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 14,
+                                      minHeight: 14,
+                                    ),
+                                    child: Text(
+                                      '$cartCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
                         },
-                        icon: const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: Colors.black,
-                          size: 24,
-                        ),
                       ),
                     ],
                   ),

@@ -26,6 +26,15 @@ class _ProductCardState extends State<ProductCard> {
     return intVal.toString();
   }
 
+  bool _isBrandValid(String brand) {
+    final clean = brand.toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll('-', '');
+    return clean.isNotEmpty &&
+        clean != 'nobrand' &&
+        clean != 'nonbrand' &&
+        clean != 'nonbranded' &&
+        clean != 'nobranded';
+  }
+
   String _getDeliveryDaysText(int durationMinutes) {
     if (durationMinutes <= 0) return '3–5 days';
     final days = durationMinutes ~/ 1440;
@@ -207,9 +216,7 @@ class _ProductCardState extends State<ProductCard> {
                       ),
                     ),
 
-                    // Brand Name (displays only when present, card height will adjust automatically)
-                    if (widget.item.brand.trim().isNotEmpty &&
-                        widget.item.brand.trim().toLowerCase() != 'no brand') ...[
+                    if (_isBrandValid(widget.item.brand)) ...[
                       const SizedBox(height: 4),
                       Text(
                         widget.item.brand.trim(),

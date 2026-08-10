@@ -186,6 +186,11 @@ class _BuyProductBtnWidgetState extends State<BuyProductBtnWidget> {
               AppRoutes.confirmAddress,
               arguments: {'buy_now': widget.data['id']},
             );
+          } else {
+            if (mounted) {
+              TopToast.show(
+                  context, 'item added to cart');
+            }
           }
         } else {
           if (mounted) {
