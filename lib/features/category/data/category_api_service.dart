@@ -1,10 +1,11 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:welfog/core/config/cdn_config.dart';
 
 class CategoryApiService {
   static const String _secondApi = 'https://welfogapi.welfog.com/api';
-  static const String _cdnBase = 'https://d1f02fefkbso7w.cloudfront.net/';
+  static const String _cdnBase = CdnConfig.imageCdn;
 
   Future<CategoryBundle> fetchMainCategories() async {
     final uri = Uri.parse('$_secondApi/nav_cat_data/');
@@ -52,24 +53,32 @@ class CategoryApiService {
     final decoded = jsonDecode(response.body);
     final raw = decoded is Map<String, dynamic> ? decoded['categories'] : null;
     if (raw is! List) return const [];
-    return raw.whereType<Map>().map((sec) {
-      final childrenRaw = sec['children'];
-      final children = (childrenRaw is List)
-          ? childrenRaw.whereType<Map>().map((c) {
-              return InnerChild(
-                id: (c['id'] ?? '').toString(),
-                name: (c['name'] ?? '').toString(),
-                imageUrl: _asAbsolute((c['img'] ?? '').toString()),
-              );
-            }).where((c) => c.id.isNotEmpty).toList()
-          : <InnerChild>[];
+    return raw
+        .whereType<Map>()
+        .map((sec) {
+          final childrenRaw = sec['children'];
+          final children = (childrenRaw is List)
+              ? childrenRaw
+                  .whereType<Map>()
+                  .map((c) {
+                    return InnerChild(
+                      id: (c['id'] ?? '').toString(),
+                      name: (c['name'] ?? '').toString(),
+                      imageUrl: _asAbsolute((c['img'] ?? '').toString()),
+                    );
+                  })
+                  .where((c) => c.id.isNotEmpty)
+                  .toList()
+              : <InnerChild>[];
 
-      return InnerSection(
-        id: (sec['id'] ?? '').toString(),
-        name: (sec['name'] ?? '').toString(),
-        children: children,
-      );
-    }).where((s) => s.children.isNotEmpty).toList();
+          return InnerSection(
+            id: (sec['id'] ?? '').toString(),
+            name: (sec['name'] ?? '').toString(),
+            children: children,
+          );
+        })
+        .where((s) => s.children.isNotEmpty)
+        .toList();
   }
 
   String _asAbsolute(String raw) {

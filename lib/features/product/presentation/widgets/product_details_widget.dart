@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../../core/utils/top_toast.dart';
 
 class ProductDetailsWidget extends StatefulWidget {
@@ -386,7 +387,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
     String brandName = '';
     if (rawBrand != null) {
       final trimmed = rawBrand.toString().trim();
-      final clean = trimmed.toLowerCase().replaceAll(RegExp(r'\s+'), '').replaceAll('-', '');
+      final clean = trimmed
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s+'), '')
+          .replaceAll('-', '');
       if (clean.isNotEmpty &&
           clean != 'nobrand' &&
           clean != 'nonbrand' &&
@@ -1292,7 +1296,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                   children: [
                                     Positioned.fill(
                                       child: Image.network(
-                                        'https://d1f02fefkbso7w.cloudfront.net/${item['thumb']}',
+                                        CdnConfig.getImageUrl(item['thumb']),
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             const Icon(Icons.image, size: 20),

@@ -3,6 +3,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class ProductOtherDetailsWidget extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -37,7 +38,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
 
   final List<Map<String, dynamic>> _benefitsData = [
     {
-      'svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>''',
+      'svg':
+          '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>''',
       'text': '5–Day Easy Return Policy!',
       'modalContent': {
         'title': '5-Day Easy Return Policy',
@@ -53,7 +55,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
       },
     },
     {
-      'svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>''',
+      'svg':
+          '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>''',
       'text': 'Pay with UPI & Get 10% Off!',
       'modalContent': {
         'title': 'Pay with UPI & Get 10% Off',
@@ -62,7 +65,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
       },
     },
     {
-      'svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z"></path></svg>''',
+      'svg':
+          '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h12v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2v2a2 2 0 0 0 2 2h4v-6z"></path></svg>''',
       'text': 'Shop Now, Pay on Delivery!',
       'modalContent': {
         'title': 'Shop Now, Pay on Delivery',
@@ -78,7 +82,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
       },
     },
     {
-      'svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"></path><path d="M5 20V8l7 4V8l7 4v8"></path></svg>''',
+      'svg':
+          '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h20"></path><path d="M5 20V8l7 4V8l7 4v8"></path></svg>''',
       'text': 'Factory Price – Direct Savings!',
       'modalContent': {
         'title': 'Factory Price',
@@ -87,7 +92,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
       },
     },
     {
-      'svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>''',
+      'svg':
+          '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#FB5404" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>''',
       'text': 'Free Delivery!',
       'modalContent': {
         'title': 'Free Delivery',
@@ -297,11 +303,7 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
 
       final imgUrl = match.group(1);
       if (imgUrl != null && imgUrl.isNotEmpty) {
-        String cleanUrl = imgUrl;
-        if (!cleanUrl.startsWith('http://') &&
-            !cleanUrl.startsWith('https://')) {
-          cleanUrl = 'https://d1f02fefkbso7w.cloudfront.net/$cleanUrl';
-        }
+        String cleanUrl = CdnConfig.getImageUrl(imgUrl);
         widgets.add(
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
@@ -496,7 +498,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
   Widget build(BuildContext context) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final RenderBox? renderBox = _tabContentKey.currentContext?.findRenderObject() as RenderBox?;
+      final RenderBox? renderBox =
+          _tabContentKey.currentContext?.findRenderObject() as RenderBox?;
       if (renderBox != null) {
         final double height = renderBox.size.height;
         final bool isLong = height > 130.0;
@@ -531,7 +534,7 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
                     child: ClipOval(
                       child: !_logoError && shop['logo'] != null
                           ? Image.network(
-                              'https://d1f02fefkbso7w.cloudfront.net/${shop['logo']}',
+                              CdnConfig.getImageUrl(shop['logo']),
                               fit: BoxFit.cover,
                               errorBuilder: (_, __, ___) {
                                 setState(() => _logoError = true);
@@ -587,10 +590,12 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
                       );
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 8),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFFB5404), width: 1.5),
+                        border: Border.all(
+                            color: const Color(0xFFFB5404), width: 1.5),
                       ),
                       child: const Text(
                         'View Shop',
@@ -612,7 +617,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
                 final screenWidth = MediaQuery.of(context).size.width;
                 return Transform.scale(
                   scaleX: screenWidth / (screenWidth - 40),
-                  child: const Divider(color: Color(0xFFE5E7EB), height: 1, thickness: 1),
+                  child: const Divider(
+                      color: Color(0xFFE5E7EB), height: 1, thickness: 1),
                 );
               },
             ),
@@ -664,7 +670,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
                       ),
                     ),
                     if (!isLast)
-                      const Divider(color: Color(0xFFF3F4F6), height: 1, thickness: 1),
+                      const Divider(
+                          color: Color(0xFFF3F4F6), height: 1, thickness: 1),
                   ],
                 );
               }),
@@ -677,7 +684,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
               final screenWidth = MediaQuery.of(context).size.width;
               return Transform.scale(
                 scaleX: screenWidth / (screenWidth - 40),
-                child: const Divider(color: Color(0xFFE5E7EB), height: 1, thickness: 1),
+                child: const Divider(
+                    color: Color(0xFFE5E7EB), height: 1, thickness: 1),
               );
             },
           ),
@@ -713,9 +721,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
                         color: isSelected
                             ? const Color(0xFF1F2937)
                             : const Color(0xFF9CA3AF),
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.w500,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
                         fontSize: 15,
                       ),
                     ),
@@ -730,7 +737,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
               final screenWidth = MediaQuery.of(context).size.width;
               return Transform.scale(
                 scaleX: screenWidth / (screenWidth - 40),
-                child: const Divider(color: Color(0xFFE5E7EB), height: 1, thickness: 1),
+                child: const Divider(
+                    color: Color(0xFFE5E7EB), height: 1, thickness: 1),
               );
             },
           ),
@@ -742,7 +750,8 @@ class _ProductOtherDetailsWidgetState extends State<ProductOtherDetailsWidget> {
             children: [
               ConstrainedBox(
                 constraints: BoxConstraints(
-                  maxHeight: (_hasLongContent && !_showMore) ? 130.0 : double.infinity,
+                  maxHeight:
+                      (_hasLongContent && !_showMore) ? 130.0 : double.infinity,
                 ),
                 child: SingleChildScrollView(
                   physics: const NeverScrollableScrollPhysics(),

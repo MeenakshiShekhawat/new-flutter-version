@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:welfog_flutter_play/welfog_flutter_play.dart' as play;
+import 'package:welfog/core/config/cdn_config.dart';
 
 class AccountApiService {
   static const String _mainApi = 'https://welfogapi.welfog.com/api/v2';
@@ -350,6 +351,7 @@ class BlockedUser {
   });
 
   final String id;
+
   /// All known id variants for this user (_id, userid, etc.).
   final Set<String> relatedIds;
   final String username;
@@ -358,9 +360,7 @@ class BlockedUser {
 
   factory BlockedUser.fromJson(Map<String, dynamic> json) {
     final nested = json['user'];
-    final src = nested is Map
-        ? Map<String, dynamic>.from(nested)
-        : json;
+    final src = nested is Map ? Map<String, dynamic>.from(nested) : json;
 
     final relatedIds = <String>{};
     for (final map in [src, json]) {
@@ -465,8 +465,7 @@ class WishlistProduct {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 

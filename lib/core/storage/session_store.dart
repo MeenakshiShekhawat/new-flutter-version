@@ -32,6 +32,7 @@ class SessionStore {
     bool postLoginCheck = false,
   }) async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_logged_in_before', true);
     await play.PlayProfileHelper.clearPlayProfileCache();
     await prefs.setBool(_kIsLoggedIn, true);
     await prefs.setString(_kAccessToken, accessToken);

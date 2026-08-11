@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../core/state/cart_state.dart';
 import '../../../core/state/wishlist_state.dart';
 import '../data/account_api_service.dart';
@@ -261,7 +262,7 @@ class _WishlistScreenState extends State<WishlistScreen>
         rating: _getRating(item.product.rating),
         color: Colors.transparent,
         imageUrl:
-            'https://d1f02fefkbso7w.cloudfront.net/${item.product.thumbnailImage}',
+            CdnConfig.getImageUrl(item.product.thumbnailImage),
         slug: item.product.link,
       ),
     );
@@ -469,7 +470,7 @@ class _WishlistScreenState extends State<WishlistScreen>
                       child: Opacity(
                         opacity: isOutOfStock ? 0.6 : 1.0,
                         child: Image.network(
-                          'https://d1f02fefkbso7w.cloudfront.net/${item.product.thumbnailImage}',
+                          CdnConfig.getImageUrl(item.product.thumbnailImage),
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               const Icon(

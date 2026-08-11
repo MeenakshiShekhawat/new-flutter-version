@@ -16,6 +16,7 @@ import 'package:flutter_cashfree_pg_sdk/utils/cfenums.dart';
 import 'package:flutter_cashfree_pg_sdk/utils/cfexceptions.dart';
 
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../core/state/cart_state.dart';
 import '../../../core/utils/safe_insets.dart';
 import '../../../core/widgets/app_loader.dart';
@@ -769,7 +770,8 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
           CFWebCheckoutPaymentBuilder().setSession(session).build();
       _cfPaymentGatewayService.doPayment(cfWebCheckout);
     } on CFException catch (e) {
-      debugPrint('[PaymentConfirmation] Cashfree native SDK error: ${e.message}');
+      debugPrint(
+          '[PaymentConfirmation] Cashfree native SDK error: ${e.message}');
       if (mounted) {
         setState(() {
           _errorMessage = 'Failed to launch payment. Please try again.';
@@ -1008,7 +1010,9 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                     .toString()) ??
             0.0) -
         _discount;
-    final double profit = double.tryParse((_cartSummary['profit'] ?? 0).toString().replaceAll(',', '')) ?? 0.0;
+    final double profit = double.tryParse(
+            (_cartSummary['profit'] ?? 0).toString().replaceAll(',', '')) ??
+        0.0;
     final double originalTotal = payable + profit + _discount;
 
     final mediaQuery = MediaQuery.of(context);
@@ -1154,8 +1158,9 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                 final double saved =
                                     mrp > price ? mrp - price : 0.0;
                                 final double totalSaved = saved * quantity;
-                                final int pct =
-                                    mrp > 0 ? (((mrp - price) / mrp) * 100).round() : 0;
+                                final int pct = mrp > 0
+                                    ? (((mrp - price) / mrp) * 100).round()
+                                    : 0;
 
                                 return Padding(
                                   padding: EdgeInsets.only(
@@ -1176,7 +1181,7 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                               BorderRadius.circular(5),
                                           child: Image.network(
                                             imageUrl != null
-                                                ? 'https://d1f02fefkbso7w.cloudfront.net/$imageUrl'
+                                                ? CdnConfig.getImageUrl(imageUrl)
                                                 : 'https://welfogapi.welfog.com/public/images/no-image.png',
                                             fit: BoxFit.cover,
                                             errorBuilder: (_, __, ___) =>
@@ -1201,50 +1206,63 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                             const SizedBox(height: 2),
-                                             Row(
-                                               children: [
-                                                 if (mrp > price) ...[
-                                                   Text(
-                                                     '₹${mrp.toStringAsFixed(0)}',
-                                                     style: TextStyle(
-                                                       fontSize: isSmallScreen ? 10 : 11,
-                                                       color: const Color(0xFF999999),
-                                                       decoration: TextDecoration.lineThrough,
-                                                     ),
-                                                   ),
-                                                   const SizedBox(width: 4),
-                                                 ],
-                                                 Text(
-                                                   '₹${price.toStringAsFixed(0)}',
-                                                   style: TextStyle(
-                                                       color: Colors.black,
-                                                       fontSize:
-                                                           isSmallScreen ? 12 : 13,
-                                                       fontWeight: FontWeight.bold),
-                                                 ),
-                                                 if (pct > 0) ...[
-                                                   const SizedBox(width: 6),
-                                                   Text(
-                                                     '$pct% OFF',
-                                                     style: const TextStyle(
-                                                         color: Color(0xFF008083),
-                                                         fontWeight: FontWeight.w700,
-                                                         fontSize: 11),
-                                                   ),
-                                                 ],
-                                               ],
-                                             ),
-                                             if (quantity > 1)
-                                               Padding(
-                                                 padding: const EdgeInsets.only(top: 2),
-                                                 child: Text(
-                                                   'Qty: $quantity x ₹${price.toStringAsFixed(0)}',
-                                                   style: TextStyle(
-                                                       color: const Color(0xFF666666),
-                                                       fontSize: isSmallScreen ? 11 : 12,
-                                                       fontWeight: FontWeight.w500),
-                                                 ),
-                                               ),
+                                            Row(
+                                              children: [
+                                                if (mrp > price) ...[
+                                                  Text(
+                                                    '₹${mrp.toStringAsFixed(0)}',
+                                                    style: TextStyle(
+                                                      fontSize: isSmallScreen
+                                                          ? 10
+                                                          : 11,
+                                                      color: const Color(
+                                                          0xFF999999),
+                                                      decoration: TextDecoration
+                                                          .lineThrough,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                ],
+                                                Text(
+                                                  '₹${price.toStringAsFixed(0)}',
+                                                  style: TextStyle(
+                                                      color: Colors.black,
+                                                      fontSize: isSmallScreen
+                                                          ? 12
+                                                          : 13,
+                                                      fontWeight:
+                                                          FontWeight.bold),
+                                                ),
+                                                if (pct > 0) ...[
+                                                  const SizedBox(width: 6),
+                                                  Text(
+                                                    '$pct% OFF',
+                                                    style: const TextStyle(
+                                                        color:
+                                                            Color(0xFF008083),
+                                                        fontWeight:
+                                                            FontWeight.w700,
+                                                        fontSize: 11),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                            if (quantity > 1)
+                                              Padding(
+                                                padding: const EdgeInsets.only(
+                                                    top: 2),
+                                                child: Text(
+                                                  'Qty: $quantity x ₹${price.toStringAsFixed(0)}',
+                                                  style: TextStyle(
+                                                      color: const Color(
+                                                          0xFF666666),
+                                                      fontSize: isSmallScreen
+                                                          ? 11
+                                                          : 12,
+                                                      fontWeight:
+                                                          FontWeight.w500),
+                                                ),
+                                              ),
                                             if (totalSaved > 0)
                                               Padding(
                                                 padding: const EdgeInsets.only(
@@ -1636,7 +1654,8 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                         ..onTap = () {
                                           Navigator.of(context).pushNamed(
                                             AppRoutes.policy,
-                                            arguments: 'anti-phishing-defense-policy',
+                                            arguments:
+                                                'anti-phishing-defense-policy',
                                           );
                                         },
                                     ),
@@ -1693,7 +1712,8 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                 ),
                                 const SizedBox(height: 2),
                                 Row(
-                                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.baseline,
                                   textBaseline: TextBaseline.alphabetic,
                                   children: [
                                     Text(
@@ -1710,7 +1730,8 @@ class _PaymentConfirmationScreenState extends State<PaymentConfirmationScreen> {
                                         style: const TextStyle(
                                           fontSize: 13,
                                           color: Color(0xFF999999),
-                                          decoration: TextDecoration.lineThrough,
+                                          decoration:
+                                              TextDecoration.lineThrough,
                                         ),
                                       ),
                                     ],

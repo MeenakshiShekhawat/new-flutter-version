@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:smart_auth/smart_auth.dart';
 import 'dart:math' as math;
 
 class LoginScreen extends StatefulWidget {
@@ -73,6 +74,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _logoAnimController.forward().then((_) {
       _cardAnimController.forward();
     });
+
+    // Trigger phone hint request after a small delay if user has logged in before
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _checkAndShowPhoneHint();
+      }
+    });
   }
 
   @override
@@ -85,6 +93,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _logoAnimController.dispose();
     _cardAnimController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAndShowPhoneHint() async {
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final hasLoggedInBefore = prefs.getBool('has_logged_in_before') ?? false;
+        if (!hasLoggedInBefore) return;
+
+        final smartAuth = SmartAuth.instance;
+        final res = await smartAuth.requestPhoneNumberHint();
+        if (res.hasData && res.data != null) {
+          String number = res.data!.trim();
+          if (number.startsWith('+')) {
+            number = number.substring(1);
+          }
+          if (number.length > 10) {
+            number = number.substring(number.length - 10);
+          }
+          setState(() {
+            _phoneController.text = number;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error getting phone number hint: $e');
+      }
+    }
   }
 
   void _startResendTimer() {
@@ -204,6 +239,7 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         await prefs.setString("is_logged_in", "true");
         await prefs.setString("account", data['account'] ?? "login");
         await prefs.setString("temp_user_id", tmpid);
+        await prefs.setBool('has_logged_in_before', true);
 
         // Expo Push Token Logic (Assuming token is available via local state/prefs)
         // Dummy block to represent push token saving

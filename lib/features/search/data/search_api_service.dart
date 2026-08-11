@@ -5,11 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../product/data/models/product_item.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class SearchApiService {
   static const String _mainApi = 'https://welfogapi.welfog.com/api/v2';
   static const String _secondApi = 'https://welfogapi.welfog.com/api';
-  static const String _cdnBase = 'https://d1f02fefkbso7w.cloudfront.net/';
+  static const String _cdnBase = CdnConfig.imageCdn;
 
   static final http.Client _client = http.Client();
   static String? _cachedLat;
@@ -215,8 +216,7 @@ class SearchApiService {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'address_screen.dart';
@@ -128,7 +129,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: BoxDecoration(
                     color: Colors.black.withAlpha(178),
                     borderRadius: BorderRadius.circular(12),
@@ -141,8 +143,12 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        success ? Icons.check_circle_rounded : Icons.info_outline_rounded,
-                        color: success ? const Color(0xFF22C55E) : const Color(0xFFEF4444),
+                        success
+                            ? Icons.check_circle_rounded
+                            : Icons.info_outline_rounded,
+                        color: success
+                            ? const Color(0xFF22C55E)
+                            : const Color(0xFFEF4444),
                         size: 18,
                       ),
                       const SizedBox(width: 8),
@@ -194,13 +200,11 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
     }
 
     if (phone.isEmpty) {
-      setState(() => _phoneError = 'Phone number is required*');
+      setState(() => _phoneError = 'Required*');
       hasError = true;
-    } else if (!RegExp(r'^[0-9]{10}$').hasMatch(phone)) {
-      setState(() => _phoneError = 'Number must be exactly 10 digits');
-      hasError = true;
-    } else if (RegExp(r'^(\d)\1{9}$').hasMatch(phone)) {
-      setState(() => _phoneError = 'Please enter a valid mobile number');
+    } else if (!RegExp(r'^[6-9][0-9]{9}$').hasMatch(phone) ||
+        RegExp(r'^(\d)\1{9}$').hasMatch(phone)) {
+      setState(() => _phoneError = 'Invalid number');
       hasError = true;
     }
 
@@ -239,7 +243,7 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
       };
 
       final uri = Uri.parse('https://welfogapi.welfog.com/api/v2/mapAddress');
-      debugPrint('Save address payload: ${jsonEncode(payload)}');
+      // debugPrint('Save address payload: ${jsonEncode(payload)}');
       final response = await http.post(
         uri,
         headers: {
@@ -330,7 +334,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -359,7 +364,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
                             const SizedBox(height: 8),
                             TextField(
                               controller: _nameController,
-                              decoration: _buildInputDecoration(hint: 'Enter name'),
+                              decoration:
+                                  _buildInputDecoration(hint: 'Enter name'),
                             ),
                           ],
                         ),
@@ -375,6 +381,10 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
                               controller: _phoneController,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                                LengthLimitingTextInputFormatter(10),
+                              ],
                               decoration: _buildInputDecoration(
                                 hint: 'Phone number',
                                 error: _phoneError,
@@ -458,7 +468,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
             top: false,
             maintainBottomViewPadding: true,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
               child: SizedBox(
                 width: double.infinity,
                 height: 52,
@@ -506,7 +517,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
       hintText: hint,
       errorText: error,
       counterText: '',
-      hintStyle: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14), // Cool gray 400
+      hintStyle: const TextStyle(
+          color: Color(0xFF9CA3AF), fontSize: 14), // Cool gray 400
       filled: true,
       fillColor: const Color(0xFFF9FAFB), // Cool gray 50
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -520,7 +532,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFF0F766E), width: 1.5), // Teal focus
+        borderSide: const BorderSide(
+            color: Color(0xFF0F766E), width: 1.5), // Teal focus
       ),
     );
   }
@@ -536,7 +549,8 @@ class _AddAddressDetailsScreenState extends State<AddAddressDetailsScreen> {
       ),
       child: Text(
         value,
-        style: const TextStyle(color: Color(0xFF4B5563), fontSize: 14), // Cool gray 600
+        style: const TextStyle(
+            color: Color(0xFF4B5563), fontSize: 14), // Cool gray 600
       ),
     );
   }

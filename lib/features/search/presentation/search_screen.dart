@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../account/data/account_api_service.dart';
 import '../../product/data/models/product_item.dart';
 import '../data/search_api_service.dart';
@@ -38,9 +39,7 @@ class _SearchScreenState extends State<SearchScreen> {
   Timer? _debounce;
 
   ProductItem _toProductItem(WishlistProduct p) {
-    final imageUrl = p.thumbnailImage.isNotEmpty
-        ? 'https://d1f02fefkbso7w.cloudfront.net/${p.thumbnailImage}'
-        : '';
+    final imageUrl = CdnConfig.getImageUrl(p.thumbnailImage);
     return ProductItem(
       id: p.id.toString(),
       title: p.name,
@@ -653,9 +652,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   Widget _buildWishlistMiniCard(WishlistItem item) {
     final p = item.product;
-    final imageUrl = p.thumbnailImage.isNotEmpty
-        ? 'https://d1f02fefkbso7w.cloudfront.net/${p.thumbnailImage}'
-        : '';
+    final imageUrl = CdnConfig.getImageUrl(p.thumbnailImage);
 
     return GestureDetector(
       onTap: () {

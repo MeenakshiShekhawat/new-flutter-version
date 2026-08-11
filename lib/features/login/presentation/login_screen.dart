@@ -3,6 +3,8 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/gestures.dart';
+import 'package:smart_auth/smart_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/constants/app_routes.dart';
 import '../../../core/storage/session_store.dart';
@@ -69,6 +71,13 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
         checkAppUpdate(context);
       }
     });
+
+    // Trigger phone hint request after a small delay if user has logged in before
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _checkAndShowPhoneHint();
+      }
+    });
   }
 
   @override
@@ -81,6 +90,33 @@ class _LoginScreenState extends State<LoginScreen> with TickerProviderStateMixin
     _toastAnimController.dispose();
     _toastTimer?.cancel();
     super.dispose();
+  }
+
+  Future<void> _checkAndShowPhoneHint() async {
+    if (Theme.of(context).platform == TargetPlatform.android) {
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final hasLoggedInBefore = prefs.getBool('has_logged_in_before') ?? false;
+        if (!hasLoggedInBefore) return;
+
+        final smartAuth = SmartAuth.instance;
+        final res = await smartAuth.requestPhoneNumberHint();
+        if (res.hasData && res.data != null) {
+          String number = res.data!.trim();
+          if (number.startsWith('+')) {
+            number = number.substring(1);
+          }
+          if (number.length > 10) {
+            number = number.substring(number.length - 10);
+          }
+          setState(() {
+            _phoneController.text = number;
+          });
+        }
+      } catch (e) {
+        debugPrint('Error getting phone number hint: $e');
+      }
+    }
   }
 
   // Resend OTP Countdown Timer
