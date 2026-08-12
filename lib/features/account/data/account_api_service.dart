@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:welfog_flutter_play/welfog_flutter_play.dart' as play;
+import 'package:welfog/core/config/cdn_config.dart';
 
 class AccountApiService {
   static const String _mainApi = 'https://welfogapi.welfog.com/api/v2';
@@ -180,6 +181,76 @@ class AccountApiService {
     }
   }
 
+  /// Order count for the Account screen's stats row.
+  /// Uses the same endpoint as OrdersScreen (GET /purchase-history/$userId)
+  /// and just counts the returned `data` list — no separate summary endpoint
+  /// exists for this, so a full fetch is the only way to get an accurate count.
+  Future<int> fetchOrdersCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token') ?? '';
+    final userId = prefs.getString('user_id') ?? '';
+    if (token.isEmpty || userId.isEmpty) return 0;
+
+    final uri = Uri.parse('$_mainApi/purchase-history/$userId');
+    final response = await http.get(
+      uri,
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) return 0;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map && decoded['data'] is List) {
+        return (decoded['data'] as List).length;
+      }
+    } catch (_) {}
+    return 0;
+  }
+
+  /// Cart item count for the Account screen's stats row.
+  /// Uses the same endpoint and summing logic as CartScreen._fetchCartData
+  /// (POST /carts/$userId, sum of cart_items[].quantity), so it will always
+  /// match what the actual Cart tab shows.
+  Future<int> fetchCartCount() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token') ?? '';
+    final userId = prefs.getString('user_id') ?? '';
+    final lat = prefs.getString('latitude') ?? '0';
+    final long = prefs.getString('longitude') ?? '0';
+    if (token.isEmpty || userId.isEmpty) return 0;
+
+    final uri = Uri.parse('$_mainApi/carts/$userId');
+    final response = await http.post(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'user_latitude': lat,
+        'user_longitude': long,
+      }),
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) return 0;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List) return 0;
+      var total = 0;
+      for (final cart in decoded) {
+        final items = cart is Map ? cart['cart_items'] : null;
+        if (items is! List) continue;
+        for (final item in items) {
+          final qty = item is Map
+              ? int.tryParse(item['quantity']?.toString() ?? '1') ?? 1
+              : 1;
+          total += qty;
+        }
+      }
+      return total;
+    } catch (_) {
+      return 0;
+    }
+  }
+
   Future<bool> addWishlistItem(int productId) async {
     final prefs = await SharedPreferences.getInstance();
     final userId = prefs.getString('user_id') ?? '';
@@ -350,6 +421,7 @@ class BlockedUser {
   });
 
   final String id;
+
   /// All known id variants for this user (_id, userid, etc.).
   final Set<String> relatedIds;
   final String username;
@@ -358,9 +430,7 @@ class BlockedUser {
 
   factory BlockedUser.fromJson(Map<String, dynamic> json) {
     final nested = json['user'];
-    final src = nested is Map
-        ? Map<String, dynamic>.from(nested)
-        : json;
+    final src = nested is Map ? Map<String, dynamic>.from(nested) : json;
 
     final relatedIds = <String>{};
     for (final map in [src, json]) {
@@ -465,8 +535,7 @@ class WishlistProduct {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 

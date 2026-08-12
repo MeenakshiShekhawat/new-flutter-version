@@ -18,48 +18,63 @@ class _AccountScreenState extends State<AccountScreen> {
   final _api = AccountApiService();
   bool _loading = true;
   AccountUser? _user;
+  int? _wishlistCount;
+  int? _ordersCount;
+  int? _cartCount;
   bool _playRouteOpening = false;
   // Pre-warmed authenticated Play route — built eagerly when tab becomes
   // active so the first tap navigates instantly without an async wait.
   String? _prewarmedPlayRoute;
+  // Purely visual — shows a brief cursor-line flash when the search bar is
+  // pressed. Does not make the field editable; tap still navigates via
+  // _openPlayRoute like before.
+ 
 
-  final List<_MenuItem> _menu = const [
+  // ---- Menu items, grouped exactly like the reference design ----
+  // (unchanged keys/behaviour — only the visual grouping/order is new)
+  static const List<_MenuItem> _profileGroup = [
     _MenuItem(
       keyName: 'profile',
-      label: 'Profile',
-      subtitle: 'View & Manage',
-      icon: Icons.person,
+      label: 'My Profile',
+      subtitle: 'Personal details',
+      icon: Icons.person_outline,
       tint: Color(0xFFE11D48),
       bg: Color(0xFFFFE4E6),
     ),
+  ];
+
+  static const List<_MenuItem> _shoppingGroup = [
     _MenuItem(
       keyName: 'orders',
       label: 'Orders',
-      subtitle: 'Track & Orders',
+      subtitle: 'Track & history',
       icon: Icons.shopping_bag_outlined,
       tint: Color(0xFF0D9488),
       bg: Color(0xFFCCFBF1),
     ),
     _MenuItem(
-      keyName: 'addresses',
-      label: 'Address',
-      subtitle: 'City & State',
-      icon: Icons.location_on_outlined,
-      tint: Color(0xFF4F46E5),
-      bg: Color(0xFFE0E7FF),
-    ),
-    _MenuItem(
       keyName: 'wishlist',
       label: 'Wishlist',
-      subtitle: 'Saved Items',
+      subtitle: 'Saved items',
       icon: Icons.favorite_border_rounded,
       tint: Color(0xFFDB2777),
       bg: Color(0xFFFCE7F3),
     ),
     _MenuItem(
+      keyName: 'addresses',
+      label: 'Addresses',
+      subtitle: 'City & state',
+      icon: Icons.location_on_outlined,
+      tint: Color(0xFF4F46E5),
+      bg: Color(0xFFE0E7FF),
+    ),
+  ];
+
+  static const List<_MenuItem> _communityGroup = [
+    _MenuItem(
       keyName: 'playProfile',
       label: 'Play Profile',
-      subtitle: 'Video & Plays',
+      subtitle: 'Videos & plays',
       icon: Icons.play_circle_outline,
       tint: Color(0xFF0EA5E9),
       bg: Color(0xFFE0F2FE),
@@ -67,15 +82,18 @@ class _AccountScreenState extends State<AccountScreen> {
     _MenuItem(
       keyName: 'supplierInfo',
       label: 'Supplier Info',
-      subtitle: 'Brands/Supplier',
+      subtitle: 'Brands & suppliers',
       icon: Icons.qr_code_scanner_outlined,
       tint: Color(0xFFEA580C),
       bg: Color(0xFFFFEDD5),
     ),
+  ];
+
+  static const List<_MenuItem> _preferencesGroup = [
     _MenuItem(
       keyName: 'help',
       label: 'Help Center',
-      subtitle: 'Instant Help',
+      subtitle: 'Instant help',
       icon: Icons.headset_mic_outlined,
       tint: Color(0xFFD97706),
       bg: Color(0xFFFEF3C7),
@@ -83,10 +101,10 @@ class _AccountScreenState extends State<AccountScreen> {
     _MenuItem(
       keyName: 'settings',
       label: 'Settings',
-      subtitle: 'Privacy',
+      subtitle: 'Privacy & app',
       icon: Icons.settings_outlined,
       tint: Color(0xFF111827),
-      bg: Color(0xFFFAF9F6),
+      bg: Color(0xFFF3F4F6),
     ),
   ];
 
@@ -122,9 +140,21 @@ class _AccountScreenState extends State<AccountScreen> {
       setState(() => _loading = true);
     }
     try {
-      final u = await _api.fetchUser();
+      // Fetch everything in parallel — real counts, same endpoints the
+      // Wishlist/Orders/Cart screens themselves use.
+      final results = await Future.wait([
+        _api.fetchUser(),
+        _api.fetchWishlist(),
+        _api.fetchOrdersCount(),
+        _api.fetchCartCount(),
+      ]);
       if (!mounted) return;
-      setState(() => _user = u);
+      setState(() {
+        _user = results[0] as AccountUser?;
+        _wishlistCount = (results[1] as List).length;
+        _ordersCount = results[2] as int;
+        _cartCount = results[3] as int;
+      });
     } finally {
       if (mounted && !silent) {
         setState(() => _loading = false);
@@ -224,188 +254,442 @@ class _AccountScreenState extends State<AccountScreen> {
             .map((s) => s.trim()[0].toUpperCase())
             .join();
 
-    final double screenWidth = MediaQuery.of(context).size.width;
-    // Calculate aspect ratio dynamically based on screen size to prevent text truncation
-    final double childAspectRatio =
-        screenWidth < 360 ? 2.3 : (screenWidth < 400 ? 2.65 : 2.9);
-
     return SafeArea(
       top: true,
       child: RefreshIndicator(
         onRefresh: _load,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 28),
           children: [
-            Container(
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
+            _buildHeaderCard(name: name, phone: phone, initials: initials),
+            const SizedBox(height: 16),
+            _buildStatsRow(),
+            const SizedBox(height: 16),
+            _buildSearchBar(),
+            const SizedBox(height: 20),
+            _sectionLabel('YOUR ACCOUNT'),
+            const SizedBox(height: 10),
+            _buildGroupCard('PROFILE', _profileGroup),
+            const SizedBox(height: 14),
+            _buildGroupCard('SHOPPING', _shoppingGroup),
+            const SizedBox(height: 14),
+            _buildGroupCard('COMMUNITY', _communityGroup),
+            const SizedBox(height: 14),
+            _buildGroupCard('PREFERENCES', _preferencesGroup),
+            // const SizedBox(height: 16),
+            // _buildLogoutButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Widget _buildLogoutButton() {
+  //   return Container(
+  //     decoration: BoxDecoration(
+  //       color: Colors.white,
+  //       borderRadius: BorderRadius.circular(16),
+  //       border: Border.all(color: const Color(0xFFF0F0F0)),
+  //     ),
+  //     child: InkWell(
+  //       borderRadius: BorderRadius.circular(16),
+  //       onTap: _logout,
+  //       child: const Padding(
+  //         padding: EdgeInsets.symmetric(vertical: 14),
+  //         child: Row(
+  //           mainAxisAlignment: MainAxisAlignment.center,
+  //           children: [
+  //             Icon(Icons.logout_rounded, size: 18, color: Color(0xFFDC2626)),
+  //             SizedBox(width: 8),
+  //             Text(
+  //               'Log out',
+  //               style: TextStyle(
+  //                 color: Color(0xFFDC2626),
+  //                 fontWeight: FontWeight.w700,
+  //                 fontSize: 14,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // ---------------- UI pieces ----------------
+
+  Widget _buildHeaderCard({
+    required String name,
+    required String phone,
+    required String initials,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFD9622B), Color(0xFFE8823F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.22),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              initials,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE5E5E5), width: 0.5),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 56,
-                    height: 56,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFDE68A),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      initials,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFFB45309),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name.isEmpty ? 'User' : name,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.verified_rounded,
+                        size: 16, color: Colors.white),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  phone.isEmpty ? '—' : phone,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.9),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          name.isEmpty ? 'User' : name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          phone,
-                          style: const TextStyle(color: Color(0xFF666666)),
-                        ),
-                      ],
+                ),
+              ],
+            ),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pushNamed(AppRoutes.profile),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.white,
+              side: BorderSide(color: Colors.white.withOpacity(0.6)),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30),
+              ),
+            ),
+            icon: const Icon(Icons.edit_outlined, size: 14),
+            label: const Text('Edit', style: TextStyle(fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      // Material ancestor is required for InkWell taps below to register
+      // and respond reliably — a plain Container alone isn't enough.
+      child: Material(
+        color: Colors.transparent,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Row(
+            children: [
+              Expanded(
+                child: _statItem(
+                  icon: Icons.shopping_bag_outlined,
+                  iconTint: const Color(0xFFEA580C),
+                  iconBg: const Color(0xFFFFE9D6),
+                  value: _ordersCount?.toString() ?? '—',
+                  label: 'ORDERS',
+               
+                   
+                ),
+              ),
+              const _StatDivider(),
+              Expanded(
+                child: _statItem(
+                  icon: Icons.favorite_border_rounded,
+                  iconTint: const Color(0xFF0D9488),
+                  iconBg: const Color(0xFFCCFBF1),
+                  value: _wishlistCount?.toString() ?? '—',
+                  label: 'WISHLIST',
+                 
+                ),
+              ),
+              const _StatDivider(),
+              Expanded(
+                child: _statItem(
+                  icon: Icons.shopping_cart_outlined,
+                  iconTint: const Color(0xFFEA580C),
+                  iconBg: const Color(0xFFFFE9D6),
+                  value: _cartCount?.toString() ?? '—',
+                  label: 'CART',
+                 
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statItem({
+    required IconData icon,
+    required Color iconTint,
+    required Color iconBg,
+    required String value,
+    required String label,
+    VoidCallback? onTap,
+  }) {
+    final content = Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: iconBg,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 17, color: iconTint),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 10.5,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0.4,
+            color: Color(0xFF9CA3AF),
+          ),
+        ),
+      ],
+    );
+    if (onTap == null) return content;
+    // InkWell sits under the Material ancestor added in _buildStatsRow so
+    // taps register correctly. No SizedBox.expand here — that needs bounded
+    // height and this Row doesn't provide one, which was causing a blank/
+    // broken page.
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: content,
+      ),
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return InkWell(
+      borderRadius: BorderRadius.circular(30),
+      onTap: () => _openPlayRoute(play.AppRoutes.search),
+     
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+  color: const Color(0xFFE5E5E5),
+),
+        ),
+        child: Row(
+  children: [
+    const Icon(
+      Icons.search_rounded,
+      color: Color(0xFF9CA3AF),
+    ),
+    const SizedBox(width: 10),
+Expanded(
+  child: const Text(
+    'Search Welfog videos',
+    style: TextStyle(
+      color: Color(0xFF9CA3AF),
+    ),
+  ),
+),
+  ],
+),
+      ),
+    );
+  }
+
+  Widget _sectionLabel(String label, {String? trailingBadge}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.6,
+            color: Color(0xFF9CA3AF),
+          ),
+        ),
+        if (trailingBadge != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE9D6),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              trailingBadge,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFFEA580C),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildGroupCard(String groupLabel, List<_MenuItem> items) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
+            child: Text(
+              groupLabel,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.6,
+                color: Color(0xFFB0B0B0),
+              ),
+            ),
+          ),
+          for (int i = 0; i < items.length; i++) ...[
+            if (i > 0)
+              const Divider(height: 1, thickness: 1, color: Color(0xFFF3F4F6)),
+            _buildMenuRow(items[i]),
+          ],
+          const SizedBox(height: 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMenuRow(_MenuItem m) {
+    final bool isPlayItem = m.keyName == 'playProfile';
+    final bool showSpinner = isPlayItem && _playRouteOpening;
+
+    return InkWell(
+      onTap: () => _onMenuTap(m),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: m.bg,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: showSpinner
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor:
+                            AlwaysStoppedAnimation<Color>(Color(0xFFFB5404)),
+                      ),
+                    )
+                  : Icon(m.icon, size: 19, color: m.tint),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    m.label,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Color(0xFF111827),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    m.subtitle,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      color: Color(0xFF9CA3AF),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Your Account',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 22,
+              color: Color(0xFFC7C7C7),
             ),
-            const SizedBox(height: 4),
-            const Text(
-              'Manage profile, orders, addresses and wishlist',
-              style: TextStyle(color: Color(0xFF666666), fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _menu.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: childAspectRatio,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-              ),
-              itemBuilder: (_, i) {
-                final m = _menu[i];
-                final bool isPlayItem = m.keyName == 'playProfile';
-                final bool showSpinner = isPlayItem && _playRouteOpening;
-                return InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () => _onMenuTap(m),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFF3F4F6)),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 32,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: m.bg,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: showSpinner
-                              ? const Center(
-                                  child: SizedBox(
-                                    width: 14,
-                                    height: 14,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                          Color(0xFFFB5404)),
-                                    ),
-                                  ),
-                                )
-                              : Icon(m.icon, size: 16, color: m.tint),
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                m.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              Text(
-                                m.subtitle,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 10.5,
-                                  color: Color(0xFF6B7280),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const Icon(
-                          Icons.chevron_right_rounded,
-                          size: 20,
-                          color: Color(0xFFC7C7C7),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 14),
-            OutlinedButton.icon(
-              onPressed: () => _openPlayRoute(play.AppRoutes.search),
-              icon: const Icon(Icons.search_rounded, color: Color(0xFFFB5404)),
-              label: const Text(
-                'Search Welfog Videos',
-                style: TextStyle(
-                  color: Color(0xFF111827),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // TextButton.icon(
-            //   onPressed: _logout,
-            //   icon: const Icon(Icons.logout, color: Color(0xFFDC2626)),
-            //   label: const Text(
-            //     'Logout',
-            //     style: TextStyle(color: Color(0xFFDC2626), fontWeight: FontWeight.w700),
-            //   ),
-            // ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StatDivider extends StatelessWidget {
+  const _StatDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 40,
+      color: const Color(0xFFF0F0F0),
     );
   }
 }
