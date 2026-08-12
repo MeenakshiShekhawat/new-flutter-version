@@ -6,6 +6,7 @@ import '../../../core/constants/app_routes.dart';
 import '../../../core/utils/persistent_image_cache_manager.dart';
 import '../../../core/widgets/no_internet_widget.dart';
 import '../../search/presentation/search_screen.dart';
+import '../../../core/state/cart_state.dart';
 import '../data/category_api_service.dart';
 
 class CategoryScreen extends StatefulWidget {
@@ -76,7 +77,7 @@ class _CategoryScreenState extends State<CategoryScreen>
       
       setState(() {});
       if (_categories.isNotEmpty) {
-        _lazyLoadInner(0);
+        _preloadAllCategories();
       }
     } catch (e) {
       debugPrint('Error loading main categories: $e');
@@ -121,6 +122,59 @@ class _CategoryScreenState extends State<CategoryScreen>
     return future;
   }
 
+  Future<void> _preloadAllCategories() async {
+    for (int i = 0; i < _categories.length; i++) {
+      if (!mounted) return;
+      try {
+        await _lazyLoadInner(i);
+      } catch (_) {}
+      await Future.delayed(const Duration(milliseconds: 30));
+    }
+  }
+
+  double _calculateBlockHeight(int i) {
+    if (i < 0 || i >= _categories.length) return 0.0;
+    
+    double height = 0.0;
+    
+    if (i == 0 && _bannerImage.isNotEmpty) {
+      final double rightPanelWidth = MediaQuery.sizeOf(context).width - 86 - 24;
+      final double bannerHeight = rightPanelWidth * (9 / 16);
+      height += bannerHeight + 14.0;
+    }
+
+    final block = _innerCategories[i];
+    if (block == null) {
+      return height + 163.0;
+    }
+
+    if (block.isEmpty) {
+      return height + 64.0;
+    }
+
+    for (final s in block) {
+      double sectionHeight = 18.0;
+      sectionHeight += 17.0 + 10.0;
+      
+      final int rowCount = (s.children.length / 3).ceil();
+      if (rowCount > 0) {
+        sectionHeight += rowCount * 99.0 + (rowCount - 1) * 14.0;
+      }
+      
+      height += sectionHeight;
+    }
+
+    return height;
+  }
+
+  double _getTargetScrollOffset(int index) {
+    double offset = 0.0;
+    for (int i = 0; i < index; i++) {
+      offset += _calculateBlockHeight(i);
+    }
+    return offset;
+  }
+
   void _scrollToLeftIndex(int index) {
     if (!_leftScrollController.hasClients) return;
     const itemHeight = 94.0; // Estimated height of sidebar item (padding + child height)
@@ -143,58 +197,67 @@ class _CategoryScreenState extends State<CategoryScreen>
 
     _scrollToLeftIndex(index);
 
-    // Scroll to the placeholder/skeleton block immediately for instant visual feedback
-    final key = _blockKeys[index];
-    if (key != null && key.currentContext != null) {
-      Scrollable.ensureVisible(
-        key.currentContext!,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-      );
-    } else {
-      // Fallback post frame callback
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        final retryKey = _blockKeys[index];
-        if (retryKey != null && retryKey.currentContext != null) {
-          Scrollable.ensureVisible(
-            retryKey.currentContext!,
+    Future<void> performScroll() async {
+      final key = _blockKeys[index];
+      if (key != null && key.currentContext != null) {
+        await Scrollable.ensureVisible(
+          key.currentContext!,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+        );
+      } else {
+        if (_rightScrollController.hasClients) {
+          final double targetOffset = _getTargetScrollOffset(index);
+          await _rightScrollController.animateTo(
+            targetOffset.clamp(0.0, _rightScrollController.position.maxScrollExtent),
             duration: const Duration(milliseconds: 250),
             curve: Curves.easeInOut,
           );
         }
-      });
+      }
     }
 
     if (_innerCategories[index] == null) {
-      // Fetch data in the background (no await here, so it doesn't block the instant scroll!)
+      performScroll();
       _lazyLoadInner(index).then((_) {
         if (!mounted || _activeIndex != index) return;
         
-        // Wait a frame to allow the newly loaded UI blocks to build and have their true layout dimensions
-        WidgetsBinding.instance.addPostFrameCallback((_) {
+        WidgetsBinding.instance.addPostFrameCallback((_) async {
           if (!mounted || _activeIndex != index) return;
           final keyAfterLoad = _blockKeys[index];
           if (keyAfterLoad != null && keyAfterLoad.currentContext != null) {
-            Scrollable.ensureVisible(
+            await Scrollable.ensureVisible(
               keyAfterLoad.currentContext!,
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeInOut,
             );
+          } else {
+            if (_rightScrollController.hasClients) {
+              final double targetOffset = _getTargetScrollOffset(index);
+              await _rightScrollController.animateTo(
+                targetOffset.clamp(0.0, _rightScrollController.position.maxScrollExtent),
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+              );
+            }
           }
+          await Future.delayed(const Duration(milliseconds: 80));
           if (mounted && _activeIndex == index) {
             setState(() {
               _isSidebarClick = false;
             });
+            _onRightScroll();
           }
         });
       });
     } else {
-      // If already loaded, unlock after the scroll animation finishes (250ms)
-      Future.delayed(const Duration(milliseconds: 250), () {
+      performScroll().then((_) async {
+        await Future.delayed(const Duration(milliseconds: 120));
         if (mounted && _activeIndex == index) {
           setState(() {
             _isSidebarClick = false;
           });
+          _onRightScroll();
         }
       });
     }
@@ -228,7 +291,12 @@ class _CategoryScreenState extends State<CategoryScreen>
             const threshold = 80.0;
             if (relativeTop <= threshold && relativeTop + height > threshold) {
               activeIdx = i;
-              break;
+            }
+            
+            // Check visibility for preloading (within viewport + 300px buffer)
+            final viewportHeight = scrollBox.size.height;
+            if (relativeTop < viewportHeight + 300 && relativeTop + height > -300) {
+              _lazyLoadInner(i);
             }
           }
         }
@@ -242,6 +310,13 @@ class _CategoryScreenState extends State<CategoryScreen>
         _activeIndex = activeIdx!;
       });
       _scrollToLeftIndex(activeIdx);
+      _lazyLoadInner(activeIdx);
+      if (activeIdx + 1 < _categories.length) {
+        _lazyLoadInner(activeIdx + 1);
+      }
+      if (activeIdx - 1 >= 0) {
+        _lazyLoadInner(activeIdx - 1);
+      }
     }
   }
 
@@ -419,9 +494,9 @@ class _CategoryScreenState extends State<CategoryScreen>
                         onPressed: () => Navigator.of(context)
                             .pushNamed(SearchScreen.routeName),
                         icon: const Icon(
-                          Icons.search_outlined,
-                          color: Colors.black,
-                          size: 24,
+                          Icons.search_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 22,
                         ),
                       ),
                       IconButton(
@@ -439,30 +514,65 @@ class _CategoryScreenState extends State<CategoryScreen>
                           }
                         },
                         icon: const Icon(
-                          Icons.favorite_border_outlined,
-                          color: Colors.black,
-                          size: 24,
+                          Icons.favorite_border_rounded,
+                          color: Color(0xFFDC2626),
+                          size: 20,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () async {
-                          final prefs = await SharedPreferences.getInstance();
-                          final token = prefs.getString('access_token') ?? '';
-                          if (token.isEmpty) {
-                            if (context.mounted) {
-                              Navigator.of(context).pushNamed(AppRoutes.login);
-                            }
-                            return;
-                          }
-                          if (context.mounted) {
-                            Navigator.of(context).pushNamed(AppRoutes.cart);
-                          }
+                      ValueListenableBuilder<int>(
+                        valueListenable: CartState.cartCountNotifier,
+                        builder: (context, cartCount, _) {
+                          return Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              IconButton(
+                                onPressed: () async {
+                                  final prefs = await SharedPreferences.getInstance();
+                                  final token = prefs.getString('access_token') ?? '';
+                                  if (token.isEmpty) {
+                                    if (context.mounted) {
+                                      Navigator.of(context).pushNamed(AppRoutes.login);
+                                    }
+                                    return;
+                                  }
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushNamed(AppRoutes.cart);
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.shopping_cart_outlined,
+                                  color: Color(0xFFDC2626),
+                                  size: 20,
+                                ),
+                              ),
+                              if (cartCount > 0)
+                                Positioned(
+                                  right: 4,
+                                  top: 4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFFDC2626),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 14,
+                                      minHeight: 14,
+                                    ),
+                                    child: Text(
+                                      '$cartCount',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
                         },
-                        icon: const Icon(
-                          Icons.shopping_cart_outlined,
-                          color: Colors.black,
-                          size: 24,
-                        ),
                       ),
                     ],
                   ),
@@ -552,7 +662,6 @@ class _CategoryScreenState extends State<CategoryScreen>
                         
                         // Load item lazily if null
                         if (block == null) {
-                          _lazyLoadInner(i);
                           return Container(
                             key: key,
                             child: const _CategorySkeletonLoader(),

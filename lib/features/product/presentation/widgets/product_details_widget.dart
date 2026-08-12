@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
+import '../../../../core/utils/top_toast.dart';
 
 class ProductDetailsWidget extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -210,22 +212,33 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
           });
         } else {
           setState(() {
-            _errorMessage = 'Ops.. Product is Not available on this pincode';
+            _errorMessage = 'Delivery not available to';
             _deliveryMessage = '';
             _checkedPincodeDuration = null;
           });
+          if (mounted) {
+            TopToast.show(context, 'Delivery not available to $pin');
+          }
         }
       } else {
         setState(() {
-          _errorMessage = 'Ops.. Product is Not available on this pincode';
+          _errorMessage = 'Delivery not available to';
           _deliveryMessage = '';
           _checkedPincodeDuration = null;
         });
+        if (mounted) {
+          TopToast.show(context, 'Delivery not available to $pin');
+        }
       }
     } catch (e) {
       setState(() {
-        _errorMessage = 'Something went wrong.';
+        _errorMessage = 'Delivery not available to';
+        _deliveryMessage = '';
+        _checkedPincodeDuration = null;
       });
+      if (mounted) {
+        TopToast.show(context, 'Delivery not available to $pin');
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -372,10 +385,17 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
         widget.data['brand']?['title'];
 
     String brandName = '';
-    if (rawBrand is String) {
-      final trimmed = rawBrand.trim();
-      final lower = trimmed.toLowerCase().replaceAll(' ', '');
-      if (lower != 'nobrand' && lower != 'non-brand' && lower != 'nonbrand') {
+    if (rawBrand != null) {
+      final trimmed = rawBrand.toString().trim();
+      final clean = trimmed
+          .toLowerCase()
+          .replaceAll(RegExp(r'\s+'), '')
+          .replaceAll('-', '');
+      if (clean.isNotEmpty &&
+          clean != 'nobrand' &&
+          clean != 'nonbrand' &&
+          clean != 'nonbranded' &&
+          clean != 'nobranded') {
         brandName = trimmed;
       }
     }
@@ -593,7 +613,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(24),
-                      border: Border.all(color: const Color(0xFFFB5404), width: 1.2),
+                      border: Border.all(
+                          color: const Color(0xFFFB5404), width: 1.2),
                     ),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -605,7 +626,11 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                               controller: _pincodeController,
                               keyboardType: TextInputType.number,
                               maxLength: 6,
-                              buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                              buildCounter: (context,
+                                      {required currentLength,
+                                      required isFocused,
+                                      maxLength}) =>
+                                  null,
                               style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w500,
@@ -615,9 +640,12 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                               },
                               decoration: const InputDecoration(
                                 hintText: 'Enter Pincode',
-                                hintStyle: TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
+                                hintStyle: TextStyle(
+                                    color: Colors.grey,
+                                    fontWeight: FontWeight.normal),
                                 counterText: '',
-                                contentPadding: EdgeInsets.symmetric(vertical: 14),
+                                contentPadding:
+                                    EdgeInsets.symmetric(vertical: 14),
                                 isDense: true,
                                 border: InputBorder.none,
                                 enabledBorder: InputBorder.none,
@@ -643,7 +671,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                 bottomRight: Radius.circular(23),
                               ),
                               border: Border(
-                                left: BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                                left: BorderSide(
+                                    color: Color(0xFFE5E7EB), width: 1.2),
                               ),
                             ),
                             child: Text(
@@ -686,12 +715,16 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFFEF2EB), // peach background
+                          color: _errorMessage.isNotEmpty
+                              ? Colors.red.shade50
+                              : const Color(0xFFFEF2EB), // peach background
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.location_on,
-                          color: Color(0xFFFB5404),
+                          color: _errorMessage.isNotEmpty
+                              ? const Color(0xFFDC2626)
+                              : const Color(0xFFFB5404),
                           size: 24,
                         ),
                       ),
@@ -700,10 +733,14 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Deliver to',
+                            Text(
+                              _errorMessage.isNotEmpty
+                                  ? 'Delivery not available to'
+                                  : 'Deliver to',
                               style: TextStyle(
-                                color: Color(0xFF71717A),
+                                color: _errorMessage.isNotEmpty
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF71717A),
                                 fontSize: 12,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -711,8 +748,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                             const SizedBox(height: 2),
                             Text(
                               _lastCheckedPin,
-                              style: const TextStyle(
-                                color: Color(0xFF1F2937),
+                              style: TextStyle(
+                                color: _errorMessage.isNotEmpty
+                                    ? const Color(0xFFDC2626)
+                                    : const Color(0xFF1F2937),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -736,8 +775,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                 padding: const EdgeInsets.symmetric(
                                     horizontal: 20, vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFB5404), // solid orange
-                                  borderRadius: BorderRadius.circular(20), // pill shape
+                                  color:
+                                      const Color(0xFFFB5404), // solid orange
+                                  borderRadius:
+                                      BorderRadius.circular(20), // pill shape
                                 ),
                                 child: const Text(
                                   'Cancel',
@@ -753,7 +794,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                     horizontal: 16, vertical: 6),
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: const Color(0xFFFB5404)),
+                                  border: Border.all(
+                                      color: const Color(0xFFFB5404)),
                                 ),
                                 child: const Text(
                                   'Change',
@@ -775,7 +817,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: const Color(0xFFFB5404), width: 1.2),
+                        border: Border.all(
+                            color: const Color(0xFFFB5404), width: 1.2),
                       ),
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -787,7 +830,11 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                 controller: _pincodeController,
                                 keyboardType: TextInputType.number,
                                 maxLength: 6,
-                                buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                                buildCounter: (context,
+                                        {required currentLength,
+                                        required isFocused,
+                                        maxLength}) =>
+                                    null,
                                 style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w500,
@@ -797,9 +844,12 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                 },
                                 decoration: const InputDecoration(
                                   hintText: 'Enter Pincode',
-                                  hintStyle: TextStyle(color: Colors.grey, fontWeight: FontWeight.normal),
+                                  hintStyle: TextStyle(
+                                      color: Colors.grey,
+                                      fontWeight: FontWeight.normal),
                                   counterText: '',
-                                  contentPadding: EdgeInsets.symmetric(vertical: 14),
+                                  contentPadding:
+                                      EdgeInsets.symmetric(vertical: 14),
                                   isDense: true,
                                   border: InputBorder.none,
                                   enabledBorder: InputBorder.none,
@@ -817,7 +867,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                 : () => _checkDelivery(_pincodeController.text),
                             child: Container(
                               alignment: Alignment.center,
-                              padding: const EdgeInsets.symmetric(horizontal: 28),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 28),
                               decoration: const BoxDecoration(
                                 color: Color(0xFFFEF2EB), // peach background
                                 borderRadius: BorderRadius.only(
@@ -825,7 +876,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                   bottomRight: Radius.circular(23),
                                 ),
                                 border: Border(
-                                  left: BorderSide(color: Color(0xFFE5E7EB), width: 1.2),
+                                  left: BorderSide(
+                                      color: Color(0xFFE5E7EB), width: 1.2),
                                 ),
                               ),
                               child: Text(
@@ -1244,7 +1296,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                                   children: [
                                     Positioned.fill(
                                       child: Image.network(
-                                        'https://d1f02fefkbso7w.cloudfront.net/${item['thumb']}',
+                                        CdnConfig.getImageUrl(item['thumb']),
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) =>
                                             const Icon(Icons.image, size: 20),

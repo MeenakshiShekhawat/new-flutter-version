@@ -656,7 +656,7 @@ class _MyProfileScreenState extends State<MyProfileScreen> with RouteAware {
         surfaceTintColor: Colors.white,
         title: const Text('Profile', style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A1A1A), fontSize: 18)),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20, color: Color(0xFF1A1A1A)),
+          icon: const Icon(Icons.chevron_left, color: Color(0xFF1A1A1A)),
           onPressed: _handleBack,
         ),
         actions: [

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:welfog_flutter_play/welfog_flutter_play.dart' as play;
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class SupplierInfoScreen extends StatefulWidget {
   const SupplierInfoScreen({super.key});
@@ -53,24 +54,31 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
         final token = prefs.getString('access_token') ?? '';
 
         if (currentUserId.isNotEmpty && token.isNotEmpty) {
-          final userRes = await http.post(
-            Uri.parse('https://welfogapi.welfog.com/api/v2/get-user-by-access_token'),
-            headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({'access_token': token, 'userId': currentUserId}),
-          ).timeout(const Duration(seconds: 4));
+          final userRes = await http
+              .post(
+                Uri.parse(
+                    'https://welfogapi.welfog.com/api/v2/get-user-by-access_token'),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode(
+                    {'access_token': token, 'userId': currentUserId}),
+              )
+              .timeout(const Duration(seconds: 4));
 
           if (userRes.statusCode == 200) {
             final userData = jsonDecode(userRes.body);
             final mobile = userData['phone'] ?? userData['mobile'] ?? '';
             if (mobile != null && mobile.toString().isNotEmpty) {
-              final mobileRes = await http.get(
-                Uri.parse('${play.kPlayApiBaseUrl}/users/bymobile/$mobile'),
-                headers: headers,
-              ).timeout(const Duration(seconds: 4));
+              final mobileRes = await http
+                  .get(
+                    Uri.parse('${play.kPlayApiBaseUrl}/users/bymobile/$mobile'),
+                    headers: headers,
+                  )
+                  .timeout(const Duration(seconds: 4));
 
               if (mobileRes.statusCode == 200) {
                 final data = jsonDecode(mobileRes.body);
-                if (data != null && (data['_id'] != null || data['id'] != null)) {
+                if (data != null &&
+                    (data['_id'] != null || data['id'] != null)) {
                   idToCheck = (data['_id'] ?? data['id']).toString();
                   await prefs.setString('play_profile_id', idToCheck);
                 }
@@ -85,14 +93,17 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
         Map<String, dynamic>? userData;
 
         try {
-          final res = await http.get(
-            Uri.parse('${play.kPlayApiBaseUrl}/users/$idToCheck'),
-            headers: headers,
-          ).timeout(const Duration(seconds: 4));
+          final res = await http
+              .get(
+                Uri.parse('${play.kPlayApiBaseUrl}/users/$idToCheck'),
+                headers: headers,
+              )
+              .timeout(const Duration(seconds: 4));
 
           if (res.statusCode == 200) {
             final decoded = jsonDecode(res.body);
-            if (decoded is Map<String, dynamic> && decoded['message'] != 'User not found') {
+            if (decoded is Map<String, dynamic> &&
+                decoded['message'] != 'User not found') {
               userData = decoded;
             }
           }
@@ -101,14 +112,18 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
         // Try userpost endpoint as a fallback if direct lookup is not successful (e.g. when idToCheck is a Mongo ObjectId)
         if (userData == null) {
           try {
-            final userpostRes = await http.get(
-              Uri.parse('${play.kPlayApiBaseUrl}/users/userpost/$idToCheck'),
-              headers: headers,
-            ).timeout(const Duration(seconds: 4));
+            final userpostRes = await http
+                .get(
+                  Uri.parse(
+                      '${play.kPlayApiBaseUrl}/users/userpost/$idToCheck'),
+                  headers: headers,
+                )
+                .timeout(const Duration(seconds: 4));
 
             if (userpostRes.statusCode == 200) {
               final decoded = jsonDecode(userpostRes.body);
-              if (decoded is Map<String, dynamic> && decoded['user'] is Map<String, dynamic>) {
+              if (decoded is Map<String, dynamic> &&
+                  decoded['user'] is Map<String, dynamic>) {
                 userData = decoded['user'] as Map<String, dynamic>;
               }
             }
@@ -116,14 +131,16 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
         }
 
         if (userData != null) {
-          final rawSellerId = userData['seller_id']?.toString() ?? userData['sellerId']?.toString();
-          final rawUserSellerId = userData['userseller_id']?.toString() ?? userData['usersellerId']?.toString();
-          
+          final rawSellerId = userData['seller_id']?.toString() ??
+              userData['sellerId']?.toString();
+          final rawUserSellerId = userData['userseller_id']?.toString() ??
+              userData['usersellerId']?.toString();
+
           final sellerIdValid = rawSellerId != null &&
               rawSellerId.isNotEmpty &&
               rawSellerId != 'null' &&
               rawSellerId != 'undefined';
-              
+
           final userSellerIdValid = rawUserSellerId != null &&
               rawUserSellerId.isNotEmpty &&
               rawUserSellerId != 'null' &&
@@ -138,7 +155,8 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
 
           if (isConnected) {
             // Prioritize userseller_id since it points directly to the seller user ID (e.g. 1116)
-            final targetSellerUserId = userSellerIdValid ? rawUserSellerId : rawSellerId;
+            final targetSellerUserId =
+                userSellerIdValid ? rawUserSellerId : rawSellerId;
             if (targetSellerUserId != null && targetSellerUserId.isNotEmpty) {
               await _fetchSupplierDetails(targetSellerUserId);
               return;
@@ -158,9 +176,12 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
 
   Future<void> _fetchSupplierDetails(String sellerUserId) async {
     try {
-      final res = await http.get(
-        Uri.parse('https://welfogapi.welfog.com/api/v2/supplier/$sellerUserId'),
-      ).timeout(const Duration(seconds: 5));
+      final res = await http
+          .get(
+            Uri.parse(
+                'https://welfogapi.welfog.com/api/v2/supplier/$sellerUserId'),
+          )
+          .timeout(const Duration(seconds: 5));
 
       if (res.statusCode == 200) {
         final Map<String, dynamic> decoded = jsonDecode(res.body);
@@ -186,9 +207,7 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
   }
 
   String _resolveImageUrl(String path) {
-    if (path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return 'https://d1f02fefkbso7w.cloudfront.net/$path';
+    return CdnConfig.getImageUrl(path);
   }
 
   void _requestCameraAndNavigate(BuildContext context) {
@@ -242,7 +261,9 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
 
     final shopId = (shop['id'] ?? '').toString();
     final slug = (shop['slug'] ?? '').toString();
-    final shopName = shop['name']?.toString() ?? supplier['shop_name']?.toString() ?? 'Supplier Shop';
+    final shopName = shop['name']?.toString() ??
+        supplier['shop_name']?.toString() ??
+        'Supplier Shop';
     final sellerName = user['name']?.toString() ?? 'Seller';
     final supplierId = (supplier['id'] ?? '').toString();
     final logoPath = shop['logo']?.toString() ?? '';
@@ -265,7 +286,7 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                 padding: const EdgeInsets.only(left: 8.0, top: 8.0),
                 child: IconButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black, size: 24),
+                  icon: const Icon(Icons.chevron_left, color: Colors.black),
                 ),
               ),
 
@@ -293,19 +314,24 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                                     );
                                   }
                                 },
-                                  child: Hero(
+                                child: Hero(
                                   tag: 'shop_logo_hero',
                                   child: Container(
                                     width: size.width * 0.48,
                                     height: size.width * 0.48,
                                     decoration: BoxDecoration(
-                                      color: Colors.white, // Keep background color white
+                                      color: Colors
+                                          .white, // Keep background color white
                                       shape: BoxShape.circle,
-                                      border: Border.all(color: const Color(0xFFFF6A00), width: 3),
+                                      border: Border.all(
+                                          color: const Color(0xFFFF6A00),
+                                          width: 3),
                                       boxShadow: [
                                         BoxShadow(
                                           // ignore: deprecated_member_use
-                                          color: const Color(0xFFFF6A00).withOpacity(0.15),
+                                          color: const Color(0xFFFF6A00)
+                                              // ignore: deprecated_member_use
+                                              .withOpacity(0.15),
                                           blurRadius: 15,
                                           spreadRadius: 2,
                                           offset: const Offset(0, 6),
@@ -317,7 +343,8 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                                           ? Image.network(
                                               logoUrl,
                                               fit: BoxFit.cover,
-                                              errorBuilder: (_, __, ___) => Image.asset(
+                                              errorBuilder: (_, __, ___) =>
+                                                  Image.asset(
                                                 'assets/images/shop_default_logo.png',
                                                 fit: BoxFit.cover,
                                               ),
@@ -336,7 +363,7 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                                 height: size.width * 0.65,
                                 fit: BoxFit.contain,
                               ),
-                        
+
                         const SizedBox(height: 24),
 
                         // Title and Description / Connected Details
@@ -359,15 +386,18 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF9FAFB),
                                       borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: const Color(0xFFE5E7EB)),
+                                      border: Border.all(
+                                          color: const Color(0xFFE5E7EB)),
                                     ),
                                     child: Column(
                                       children: [
-                                        _buildDetailRow('Supplier ID', supplierId),
+                                        _buildDetailRow(
+                                            'Supplier ID', supplierId),
                                         const SizedBox(height: 10),
                                         _buildDetailRow('Shop Name', shopName),
                                         const SizedBox(height: 10),
-                                        _buildDetailRow('Supplier Name', sellerName),
+                                        _buildDetailRow(
+                                            'Supplier Name', sellerName),
                                       ],
                                     ),
                                   ),
@@ -429,12 +459,16 @@ class _SupplierInfoScreenState extends State<SupplierInfoScreen> {
                               }
                             },
                             icon: Icon(
-                              _isConnected ? Icons.storefront_rounded : Icons.qr_code_scanner_rounded,
+                              _isConnected
+                                  ? Icons.storefront_rounded
+                                  : Icons.qr_code_scanner_rounded,
                               color: Colors.white,
                               size: 22,
                             ),
                             label: Text(
-                              _isConnected ? 'Go to Seller Shop' : 'Continue to Scan',
+                              _isConnected
+                                  ? 'Go to Seller Shop'
+                                  : 'Continue to Scan',
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 16,

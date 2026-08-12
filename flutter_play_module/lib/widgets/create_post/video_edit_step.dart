@@ -1365,7 +1365,7 @@ class _VideoEditStepState extends State<VideoEditStep>
           child: Row(
             children: [
               _VideoOverlayIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
+                icon: Icons.chevron_left,
                 size: 18,
                 onTap: _handleBackPress,
               ),

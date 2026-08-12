@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../product/data/models/product_item.dart';
 
@@ -30,7 +31,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
     _fetchOrders();
     _scrollController.addListener(() {
       // Trigger fetch earlier (when user is within 400px from the bottom) for fluid load times
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 400) {
+      if (_scrollController.position.pixels >=
+          _scrollController.position.maxScrollExtent - 400) {
         if (!_isFetching && _nextPageUrl != null) {
           _fetchOrders(url: _nextPageUrl, append: true);
         }
@@ -54,7 +56,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
           _loadingMore = true;
         } else {
           _loading = true;
-          _orders.clear(); // Clear list on initial load or refresh for fresh UI state
+          _orders
+              .clear(); // Clear list on initial load or refresh for fresh UI state
           _nextPageUrl = null;
         }
       });
@@ -75,7 +78,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
         return;
       }
 
-      final endpoint = url ?? 'https://welfogapi.welfog.com/api/v2/purchase-history/$userId';
+      final endpoint =
+          url ?? 'https://welfogapi.welfog.com/api/v2/purchase-history/$userId';
       Uri uri = Uri.parse(endpoint);
       final queryParams = Map<String, String>.from(uri.queryParameters);
       if (!queryParams.containsKey('user_id')) {
@@ -90,8 +94,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
         },
       );
 
-
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final isResultTrue = data['result'] == true ||
@@ -103,7 +105,7 @@ class _OrdersScreenState extends State<OrdersScreen> {
           final List newOrders = data['data'] as List? ?? [];
           final meta = data['meta'] as Map? ?? {};
           final List links = meta['links'] as List? ?? [];
-          
+
           String? next;
           for (var link in links) {
             final label = link['label']?.toString() ?? '';
@@ -140,14 +142,30 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   String cleanPrice(dynamic val) {
     if (val == null) return '0';
-    return val.toString().replaceAll(RegExp(r'Rs|RS|₹', caseSensitive: false), '').trim();
+    return val
+        .toString()
+        .replaceAll(RegExp(r'Rs|RS|₹', caseSensitive: false), '')
+        .trim();
   }
 
   String formatDate(String? dateStr) {
     if (dateStr == null || dateStr.isEmpty) return 'N/A';
     try {
       final date = DateTime.parse(dateStr);
-      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ];
       return '${date.day} ${months[date.month - 1]} ${date.year}';
     } catch (_) {
       return dateStr;
@@ -187,9 +205,6 @@ class _OrdersScreenState extends State<OrdersScreen> {
       },
     );
   }
-
-
-
 
   void _handleBack() {
     if (mounted) {
@@ -237,365 +252,455 @@ class _OrdersScreenState extends State<OrdersScreen> {
           ),
           centerTitle: true,
         ),
-      body: RefreshIndicator(
-        onRefresh: () => _fetchOrders(),
-        color: const Color(0xFFFB5404),
-        child: _loading
-            ? const AppLoader.page()
-            : _orders.isEmpty
-                ? ListView(
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.only(top: 80.0, left: 24, right: 24),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.shopping_bag_outlined,
-                              size: 100,
-                              color: Colors.grey.shade300,
-                            ),
-                            const SizedBox(height: 20),
-                            const Text(
-                              'No Orders Yet',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF111827),
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              'Looks like you haven\'t placed any orders yet.',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 20),
-                            SizedBox(
-                              width: 180,
-                              height: 48,
-                              child: ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFFFB5404),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(24),
-                                  ),
-                                ),
-                                onPressed: () {
-                                  Navigator.of(context).pushReplacementNamed(AppRoutes.home);
-                                },
-                                child: const Text(
-                                  'Start Shopping',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _orders.length + (_nextPageUrl != null ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == _orders.length) {
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: _loadingMore
-                                ? const AppLoader.button(color: Color(0xFFFB5404))
-                                : const SizedBox.shrink(),
-                          ),
-                        );
-                      }
-
-                      final order = _orders[index] as Map<String, dynamic>;
-                      final statusStr = order['current_order_status']?.toString() ??
-                          order['delivery_status_string']?.toString() ??
-                          '';
-
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.shade200, width: 1),
-                        ),
-                        color: Colors.white,
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+        body: RefreshIndicator(
+          onRefresh: () => _fetchOrders(),
+          color: const Color(0xFFFB5404),
+          child: _loading
+              ? const AppLoader.page()
+              : _orders.isEmpty
+                  ? ListView(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(
+                              top: 80.0, left: 24, right: 24),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              // 1. Header (Order ID & Status)
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    'Order ${order['oid']}',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    statusStr,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF0F766E), // Teal color
-                                    ),
-                                  ),
-                                ],
+                              Icon(
+                                Icons.shopping_bag_outlined,
+                                size: 100,
+                                color: Colors.grey.shade300,
                               ),
-                              const SizedBox(height: 12),
-
-                              // 2. Middle Row (Product image & details)
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () {
-                                      final targetSlug = (order['slug'] ?? order['product_slug'] ?? order['product_id'] ?? '').toString();
-                                      if (targetSlug.isNotEmpty) {
-                                        Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.product,
-                                          arguments: ProductItem(
-                                            id: (order['product_id'] ?? '').toString(),
-                                            title: order['product_title']?.toString() ?? '',
-                                            subtitle: '',
-                                            price: double.tryParse(order['grand_total']?.toString() ?? '0') ?? 0.0,
-                                            rating: 0.0,
-                                            color: Colors.transparent,
-                                            imageUrl: order['product_img']?.toString() ?? '',
-                                            slug: targetSlug,
-                                          ),
-                                        );
-                                      }
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        'https://d1f02fefkbso7w.cloudfront.net/${order['product_img']}',
-                                        width: 70,
-                                        height: 70,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          width: 70,
-                                          height: 70,
-                                          color: Colors.grey.shade100,
-                                          child: const Icon(Icons.image, color: Colors.grey),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          order['product_title']?.toString() ?? '',
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Color(0xFF4B5563),
-                                            fontSize: 13.5,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Date: ${formatDate(order['date']?.toString())}',
-                                          style: const TextStyle(
-                                            color: Colors.grey,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          '₹${cleanPrice(order['grand_total'])}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 15,
-                                            color: Colors.black,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                              const SizedBox(height: 20),
+                              const Text(
+                                'No Orders Yet',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF111827),
+                                ),
                               ),
-                              const SizedBox(height: 16),
-
-                              // 2.5. Product Rating Row
-                              if (['delivered', 'completed'].contains(order['current_order_status']?.toString().toLowerCase().trim())) ...[
-                                () {
-                                  final hasReview = order['review'] != null && order['review']['rating'] != null;
-                                  final canReview = _isReviewWindowOpen(order['date']?.toString());
-                                  if (!canReview && !hasReview) return const SizedBox.shrink();
-
-                                  return Padding(
-                                    padding: const EdgeInsets.only(bottom: 12),
-                                    child: InkWell(
-                                      onTap: canReview ? () => _openReviewModal(order) : null,
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Container(
-                                        padding: const EdgeInsets.all(12),
-                                        decoration: BoxDecoration(
-                                          color: Colors.grey.shade50,
-                                          borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey.shade200, width: 0.8),
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  hasReview
-                                                      ? (canReview ? "Your Rating (Tap to change)" : "Your Rating (Locked)")
-                                                      : "Rate this product",
-                                                  style: TextStyle(
-                                                    color: Colors.grey.shade700,
-                                                    fontSize: 12.5,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                Row(
-                                                  children: List.generate(5, (index) {
-                                                    final starNum = index + 1;
-                                                    final double userRating = double.tryParse(order['review']?['rating']?.toString() ?? '0') ?? 0.0;
-                                                    final isStarred = starNum <= userRating;
-                                                    return Icon(
-                                                      isStarred ? Icons.star : Icons.star_border,
-                                                      size: 20,
-                                                      color: (canReview || hasReview) ? const Color(0xFFFFB800) : Colors.grey.shade400,
-                                                    );
-                                                  }),
-                                                ),
-                                              ],
-                                            ),
-                                            if (!canReview && hasReview) ...[
-                                              const SizedBox(height: 6),
-                                              Text(
-                                                "Reviews cannot be edited after 30 days of purchase.",
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  color: Colors.grey.shade500,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }(),
-                              ],
-
-                              const Divider(height: 1, color: Color(0xFFF3F4F6)),
-                              const SizedBox(height: 12),
-
-                              // 3. Bottom Action Buttons Row
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.trackOrder,
-                                          arguments: {
-                                            'oid': order['oid'],
-                                            'order': order,
-                                          },
-                                        );
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF1F2937),
-                                        side: BorderSide(color: Colors.grey.shade300, width: 0.8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        elevation: 0,
-                                      ),
-                                      child: const Text(
-                                        'Track',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                              const SizedBox(height: 10),
+                              const Text(
+                                'Looks like you haven\'t placed any orders yet.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: 180,
+                                height: 48,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFFB5404),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(24),
                                     ),
                                   ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () async {
-                                        final updatedOrder = await Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.orderDetails,
-                                          arguments: {
-                                            'oid': order['oid'],
-                                            'initialRefundStatus': order['current_order_status'],
-                                          },
-                                        );
-                                        if (updatedOrder is Map<String, dynamic>) {
-                                          setState(() {
-                                            final idx = _orders.indexWhere((o) => o['oid'] == order['oid']);
-                                            if (idx != -1) {
-                                              final mutableOrder = Map<String, dynamic>.from(_orders[idx]);
-                                              if (updatedOrder['current_order_status'] != null) {
-                                                mutableOrder['current_order_status'] = updatedOrder['current_order_status'];
-                                              }
-                                              if (updatedOrder['delivery_status_string'] != null) {
-                                                mutableOrder['delivery_status_string'] = updatedOrder['delivery_status_string'];
-                                              }
-                                              _orders[idx] = mutableOrder;
-                                            }
-                                          });
-                                        }
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: const Color(0xFF1F2937),
-                                        side: BorderSide(color: Colors.grey.shade300, width: 0.8),
-                                        shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(vertical: 12),
-                                        elevation: 0,
-                                      ),
-                                      child: const Text(
-                                        'View Details',
-                                        style: TextStyle(
-                                          fontSize: 13.5,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
+                                  onPressed: () {
+                                    Navigator.of(context)
+                                        .pushReplacementNamed(AppRoutes.home);
+                                  },
+                                  child: const Text(
+                                    'Start Shopping',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ],
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      );
-                    },
-                  ),
-      ),
+                      ],
+                    )
+                  : ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(16),
+                      itemCount:
+                          _orders.length + (_nextPageUrl != null ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == _orders.length) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(
+                              child: _loadingMore
+                                  ? const AppLoader.button(
+                                      color: Color(0xFFFB5404))
+                                  : const SizedBox.shrink(),
+                            ),
+                          );
+                        }
+
+                        final order = _orders[index] as Map<String, dynamic>;
+                        final statusStr =
+                            order['current_order_status']?.toString() ??
+                                order['delivery_status_string']?.toString() ??
+                                '';
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                                color: Colors.grey.shade200, width: 1),
+                          ),
+                          color: Colors.white,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 1. Header (Order ID & Status)
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      'Order ${order['oid']}',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      statusStr,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F766E), // Teal color
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+
+                                // 2. Middle Row (Product image & details)
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    GestureDetector(
+                                      onTap: () {
+                                        final targetSlug = (order['slug'] ??
+                                                order['product_slug'] ??
+                                                order['product_id'] ??
+                                                '')
+                                            .toString();
+                                        if (targetSlug.isNotEmpty) {
+                                          Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.product,
+                                            arguments: ProductItem(
+                                              id: (order['product_id'] ?? '')
+                                                  .toString(),
+                                              title: order['product_title']
+                                                      ?.toString() ??
+                                                  '',
+                                              subtitle: '',
+                                              price: double.tryParse(
+                                                      order['grand_total']
+                                                              ?.toString() ??
+                                                          '0') ??
+                                                  0.0,
+                                              rating: 0.0,
+                                              color: Colors.transparent,
+                                              imageUrl: order['product_img']
+                                                      ?.toString() ??
+                                                  '',
+                                              slug: targetSlug,
+                                            ),
+                                          );
+                                        }
+                                      },
+                                      child: ClipRRect(
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Image.network(
+                                          CdnConfig.getImageUrl(order['product_img']),
+                                          width: 70,
+                                          height: 70,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (_, __, ___) =>
+                                              Container(
+                                            width: 70,
+                                            height: 70,
+                                            color: Colors.grey.shade100,
+                                            child: const Icon(Icons.image,
+                                                color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            order['product_title']
+                                                    ?.toString() ??
+                                                '',
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0xFF4B5563),
+                                              fontSize: 13.5,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            'Date: ${formatDate(order['date']?.toString())}',
+                                            style: const TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '₹${cleanPrice(order['grand_total'])}',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 15,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+
+                                // 2.5. Product Rating Row
+                                if (['delivered', 'completed'].contains(
+                                    order['current_order_status']
+                                        ?.toString()
+                                        .toLowerCase()
+                                        .trim())) ...[
+                                  () {
+                                    final hasReview = order['review'] != null &&
+                                        order['review']['rating'] != null;
+                                    final canReview = _isReviewWindowOpen(
+                                        order['date']?.toString());
+                                    if (!canReview && !hasReview)
+                                      // ignore: curly_braces_in_flow_control_structures
+                                      return const SizedBox.shrink();
+
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: InkWell(
+                                        onTap: canReview
+                                            ? () => _openReviewModal(order)
+                                            : null,
+                                        borderRadius: BorderRadius.circular(8),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey.shade50,
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                                color: Colors.grey.shade200,
+                                                width: 0.8),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment
+                                                        .spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    hasReview
+                                                        ? (canReview
+                                                            ? "Your Rating (Tap to change)"
+                                                            : "Your Rating (Locked)")
+                                                        : "Rate this product",
+                                                    style: TextStyle(
+                                                      color:
+                                                          Colors.grey.shade700,
+                                                      fontSize: 12.5,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                  Row(
+                                                    children: List.generate(5,
+                                                        (index) {
+                                                      final starNum = index + 1;
+                                                      final double userRating =
+                                                          double.tryParse(order[
+                                                                              'review']
+                                                                          ?[
+                                                                          'rating']
+                                                                      ?.toString() ??
+                                                                  '0') ??
+                                                              0.0;
+                                                      final isStarred =
+                                                          starNum <= userRating;
+                                                      return Icon(
+                                                        isStarred
+                                                            ? Icons.star
+                                                            : Icons.star_border,
+                                                        size: 20,
+                                                        color: (canReview ||
+                                                                hasReview)
+                                                            ? const Color(
+                                                                0xFFFFB800)
+                                                            : Colors
+                                                                .grey.shade400,
+                                                      );
+                                                    }),
+                                                  ),
+                                                ],
+                                              ),
+                                              if (!canReview && hasReview) ...[
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  "Reviews cannot be edited after 30 days of purchase.",
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: Colors.grey.shade500,
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }(),
+                                ],
+
+                                const Divider(
+                                    height: 1, color: Color(0xFFF3F4F6)),
+                                const SizedBox(height: 12),
+
+                                // 3. Bottom Action Buttons Row
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.trackOrder,
+                                            arguments: {
+                                              'oid': order['oid'],
+                                              'order': order,
+                                            },
+                                          );
+                                        },
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor:
+                                              const Color(0xFF1F2937),
+                                          side: BorderSide(
+                                              color: Colors.grey.shade300,
+                                              width: 0.8),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                          elevation: 0,
+                                        ),
+                                        child: const Text(
+                                          'Track',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: OutlinedButton(
+                                        onPressed: () async {
+                                          final updatedOrder =
+                                              await Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.orderDetails,
+                                            arguments: {
+                                              'oid': order['oid'],
+                                              'initialRefundStatus':
+                                                  order['current_order_status'],
+                                            },
+                                          );
+                                          if (updatedOrder
+                                              is Map<String, dynamic>) {
+                                            setState(() {
+                                              final idx = _orders.indexWhere(
+                                                  (o) =>
+                                                      o['oid'] == order['oid']);
+                                              if (idx != -1) {
+                                                final mutableOrder =
+                                                    Map<String, dynamic>.from(
+                                                        _orders[idx]);
+                                                if (updatedOrder[
+                                                        'current_order_status'] !=
+                                                    null) {
+                                                  mutableOrder[
+                                                          'current_order_status'] =
+                                                      updatedOrder[
+                                                          'current_order_status'];
+                                                }
+                                                if (updatedOrder[
+                                                        'delivery_status_string'] !=
+                                                    null) {
+                                                  mutableOrder[
+                                                          'delivery_status_string'] =
+                                                      updatedOrder[
+                                                          'delivery_status_string'];
+                                                }
+                                                _orders[idx] = mutableOrder;
+                                              }
+                                            });
+                                          }
+                                        },
+                                        style: OutlinedButton.styleFrom(
+                                          foregroundColor:
+                                              const Color(0xFF1F2937),
+                                          side: BorderSide(
+                                              color: Colors.grey.shade300,
+                                              width: 0.8),
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 12),
+                                          elevation: 0,
+                                        ),
+                                        child: const Text(
+                                          'View Details',
+                                          style: TextStyle(
+                                            fontSize: 13.5,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
       ),
     );
   }
@@ -677,7 +782,9 @@ class StepIndicator extends StatelessWidget {
                       fontWeight: active ? FontWeight.bold : FontWeight.w500,
                       color: active
                           ? const Color(0xFFFB5404)
-                          : (completed ? const Color(0xFF10B981) : Colors.grey.shade400),
+                          : (completed
+                              ? const Color(0xFF10B981)
+                              : Colors.grey.shade400),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -713,9 +820,12 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
   void initState() {
     super.initState();
     if (widget.order['review'] != null) {
-      final double rVal = double.tryParse(widget.order['review']['rating']?.toString() ?? '0') ?? 0.0;
+      final double rVal = double.tryParse(
+              widget.order['review']['rating']?.toString() ?? '0') ??
+          0.0;
       _currentRating = rVal.toInt();
-      _commentController.text = widget.order['review']['comment']?.toString() ?? '';
+      _commentController.text =
+          widget.order['review']['comment']?.toString() ?? '';
     }
   }
 
@@ -749,8 +859,12 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
       }
 
       final dynamic userId = int.tryParse(userIdStr) ?? userIdStr;
-      final dynamic orderId = int.tryParse(widget.order['oid']?.toString() ?? '') ?? widget.order['oid'];
-      final dynamic productId = int.tryParse(widget.order['product_id']?.toString() ?? '') ?? widget.order['product_id'];
+      final dynamic orderId =
+          int.tryParse(widget.order['oid']?.toString() ?? '') ??
+              widget.order['oid'];
+      final dynamic productId =
+          int.tryParse(widget.order['product_id']?.toString() ?? '') ??
+              widget.order['product_id'];
 
       final payload = {
         'user_id': userId,
@@ -787,7 +901,8 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
       debugPrint('Review Submit Error: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Unable to save your review. Please try again.')),
+          const SnackBar(
+              content: Text('Unable to save your review. Please try again.')),
         );
       }
     } finally {
@@ -825,7 +940,9 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
                       setState(() => _currentRating = starNum);
                     },
                     icon: Icon(
-                      starNum <= _currentRating ? Icons.star : Icons.star_border,
+                      starNum <= _currentRating
+                          ? Icons.star
+                          : Icons.star_border,
                       size: 40,
                       color: const Color(0xFFFFB800),
                     ),
@@ -854,8 +971,10 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+                    onPressed:
+                        _submitting ? null : () => Navigator.of(context).pop(),
+                    child: const Text('Cancel',
+                        style: TextStyle(color: Colors.grey)),
                   ),
                   const SizedBox(width: 8),
                   ElevatedButton(
@@ -865,11 +984,15 @@ class _ReviewSubmitDialogState extends State<_ReviewSubmitDialog> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 10),
                     ),
                     child: _submitting
                         ? const AppLoader.button()
-                        : const Text('Submit', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        : const Text('Submit',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                   ),
                 ],
               ),

@@ -14,6 +14,7 @@ import '../../../core/utils/safe_insets.dart';
 import '../../../core/widgets/app_loader.dart';
 import '../../home/presentation/home_screen.dart';
 import '../../../core/utils/top_toast.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class CartItem {
   final int id;
@@ -238,7 +239,7 @@ class _CartScreenState extends State<CartScreen>
 
   StreamSubscription? _refreshTabSub;
 
-  static const String _cdnBaseUrl = 'https://d1f02fefkbso7w.cloudfront.net/';
+  static const String _cdnBaseUrl = CdnConfig.imageCdn;
 
   @override
   void initState() {
@@ -322,7 +323,8 @@ class _CartScreenState extends State<CartScreen>
       if (token == null || userId == null) return;
 
       final cartUri =
-          Uri.parse('https://welfogapi.welfog.com/api/v2/carts/$userId').replace(
+          Uri.parse('https://welfogapi.welfog.com/api/v2/carts/$userId')
+              .replace(
         queryParameters: {
           't': DateTime.now().millisecondsSinceEpoch.toString(),
         },
@@ -361,7 +363,8 @@ class _CartScreenState extends State<CartScreen>
 
       Map<String, dynamic> summaryData = {};
       final summaryUri =
-          Uri.parse('https://welfogapi.welfog.com/api/v2/cart-summary/$userId').replace(
+          Uri.parse('https://welfogapi.welfog.com/api/v2/cart-summary/$userId')
+              .replace(
         queryParameters: {
           't': DateTime.now().millisecondsSinceEpoch.toString(),
         },
@@ -710,7 +713,8 @@ class _CartScreenState extends State<CartScreen>
                       GestureDetector(
                         onTap: () {
                           if (item.slug != null) {
-                            Navigator.of(context).pushNamed('/products/${item.slug}');
+                            Navigator.of(context)
+                                .pushNamed('/products/${item.slug}');
                           }
                         },
                         child: Image.network(
@@ -745,11 +749,12 @@ class _CartScreenState extends State<CartScreen>
                                   decoration: BoxDecoration(
                                       color: const Color(0xFFF5F5F5),
                                       borderRadius: BorderRadius.circular(4),
-                                      border:
-                                          Border.all(color: const Color(0xFFDDDDDD))),
+                                      border: Border.all(
+                                          color: const Color(0xFFDDDDDD))),
                                   child: const Text('-',
                                       style: TextStyle(
-                                          fontSize: 15, color: Color(0xFF333333))),
+                                          fontSize: 15,
+                                          color: Color(0xFF333333))),
                                 ),
                               ),
                               Container(
@@ -758,7 +763,8 @@ class _CartScreenState extends State<CartScreen>
                                 child: Text(
                                   '${item.quantity < 1 ? 1 : item.quantity}',
                                   style: const TextStyle(
-                                      fontWeight: FontWeight.w600, fontSize: 13),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -775,10 +781,10 @@ class _CartScreenState extends State<CartScreen>
                                   decoration: BoxDecoration(
                                       color: const Color(0xFFF5F5F5),
                                       borderRadius: BorderRadius.circular(4),
-                                      border:
-                                          Border.all(color: const Color(0xFFDDDDDD))),
-                                  child:
-                                      const Text('+', style: TextStyle(fontSize: 15)),
+                                      border: Border.all(
+                                          color: const Color(0xFFDDDDDD))),
+                                  child: const Text('+',
+                                      style: TextStyle(fontSize: 15)),
                                 ),
                               ),
                             ],
@@ -816,7 +822,8 @@ class _CartScreenState extends State<CartScreen>
                           Padding(
                             padding: const EdgeInsets.only(top: 3),
                             child: Text('Size: ${item.size}',
-                                style: const TextStyle(color: Color(0xFF666666), fontSize: 11)),
+                                style: const TextStyle(
+                                    color: Color(0xFF666666), fontSize: 11)),
                           ),
                         Padding(
                           padding: const EdgeInsets.only(top: 4),

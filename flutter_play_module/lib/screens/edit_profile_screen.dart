@@ -444,7 +444,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           Row(
             children: [
               _circleIconButton(
-                icon: Icons.arrow_back_ios_new_rounded,
+                icon: Icons.chevron_left,
                 onTap: () => Navigator.maybePop(context),
               ),
               const Spacer(),

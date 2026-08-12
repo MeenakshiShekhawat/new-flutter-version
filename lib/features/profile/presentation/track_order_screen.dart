@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../core/utils/safe_insets.dart';
 import '../../../core/widgets/app_loader.dart';
 
@@ -247,8 +248,144 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
       final dateMatch =
           o['date']?.toString().toLowerCase().contains(query) ?? false;
       final totalMatch = o['grand_total']?.toString().contains(query) ?? false;
-      return oidMatch || dateMatch || totalMatch;
+      final productTitleMatch =
+          o['product_title']?.toString().toLowerCase().contains(query) ?? false;
+      return oidMatch || dateMatch || totalMatch || productTitleMatch;
     }).toList();
+  }
+
+  Widget _buildHighlightedText(String text, String query,
+      {double fontSize = 13.0, bool isBold = true}) {
+    if (query.isEmpty) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontSize: fontSize,
+          color: Colors.black87,
+        ),
+      );
+    }
+
+    final String textLower = text.toLowerCase();
+    final String queryLower = query.toLowerCase();
+
+    if (!textLower.contains(queryLower)) {
+      return Text(
+        text,
+        style: TextStyle(
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontSize: fontSize,
+          color: Colors.black87,
+        ),
+      );
+    }
+
+    final List<TextSpan> spans = [];
+    int start = 0;
+    int indexOfMatch;
+
+    while ((indexOfMatch = textLower.indexOf(queryLower, start)) != -1) {
+      if (indexOfMatch > start) {
+        spans.add(TextSpan(text: text.substring(start, indexOfMatch)));
+      }
+
+      spans.add(TextSpan(
+        text: text.substring(indexOfMatch, indexOfMatch + query.length),
+        style: TextStyle(
+          backgroundColor: Colors.amber.shade200,
+          color: Colors.black87,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+
+      start = indexOfMatch + query.length;
+    }
+
+    if (start < text.length) {
+      spans.add(TextSpan(text: text.substring(start)));
+    }
+
+    return RichText(
+      text: TextSpan(
+        style: TextStyle(
+          color: Colors.black87,
+          fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+          fontSize: fontSize,
+        ),
+        children: spans,
+      ),
+    );
+  }
+
+  void _checkAndFetchMoreForSearch() {
+    if (_searchQuery.isNotEmpty &&
+        _filteredOrders.isEmpty &&
+        !_loadingMore &&
+        _currentPage < _totalPages) {
+      _fetchOrders(page: _currentPage + 1, append: true).then((_) {
+        _checkAndFetchMoreForSearch();
+      });
+    }
+  }
+
+  Widget _buildDropdownItem(dynamic item) {
+    final isSelected = _selectedOrder?['oid'] == item['oid'];
+    final orderIdStr = item['oid']?.toString() ?? '';
+    final productTitleStr = item['product_title']?.toString() ?? '';
+
+    return ListTile(
+      tileColor: isSelected ? const Color(0xFFF0F7FF) : null,
+      title: Row(
+        children: [
+          const Text(
+            '#',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 13,
+              color: Colors.black87,
+            ),
+          ),
+          _buildHighlightedText(orderIdStr, _searchQuery,
+              fontSize: 13, isBold: true),
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (productTitleStr.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 2.0),
+              child: _buildHighlightedText(
+                productTitleStr,
+                _searchQuery,
+                fontSize: 11,
+                isBold: false,
+              ),
+            ),
+          Text(
+            '${_formatDate(item['date'])} • ₹${item['grand_total']}',
+            style: TextStyle(fontSize: 10, color: Colors.grey.shade500),
+          ),
+        ],
+      ),
+      trailing: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: _getStatusColor(item['delivery_status']).withAlpha(26),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          _getDeliveryStatusString(item['delivery_status']).toUpperCase(),
+          style: TextStyle(
+            color: _getStatusColor(item['delivery_status']),
+            fontWeight: FontWeight.bold,
+            fontSize: 9,
+          ),
+        ),
+      ),
+      onTap: () => _handleOrderSelect(item),
+    );
   }
 
   void _handleOrderSelect(dynamic order) {
@@ -391,14 +528,19 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                     ),
                     constraints: const BoxConstraints(maxHeight: 300),
                     child: Column(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         // Search bar
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: TextField(
-                            onChanged: (val) =>
-                                setState(() => _searchQuery = val),
+                            maxLength: 10,
+                            onChanged: (val) {
+                              setState(() => _searchQuery = val);
+                              _checkAndFetchMoreForSearch();
+                            },
                             decoration: InputDecoration(
+                              counterText: "",
                               hintText: 'Search orders by ID, date, or amount',
                               hintStyle: TextStyle(
                                   color: Colors.grey.shade400, fontSize: 13),
@@ -416,64 +558,52 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                           ),
                         ),
                         // List
-                        Expanded(
-                          child: ListView.builder(
-                            controller: _dropdownScrollController,
-                            itemCount: _filteredOrders.length +
-                                (_currentPage < _totalPages ? 1 : 0),
-                            itemBuilder: (context, idx) {
-                              if (idx == _filteredOrders.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                        Flexible(
+                          child: (_filteredOrders.isEmpty &&
+                                  _searchQuery.isNotEmpty &&
+                                  !_loadingMore)
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      vertical: 16.0, horizontal: 12.0),
                                   child: Center(
-                                    child: AppLoader.button(
-                                        color: Color(0xFFFB5404)),
-                                  ),
-                                );
-                              }
-
-                              final item = _filteredOrders[idx];
-                              final isSelected =
-                                  _selectedOrder?['oid'] == item['oid'];
-
-                              return ListTile(
-                                tileColor:
-                                    isSelected ? const Color(0xFFF0F7FF) : null,
-                                title: Text(
-                                  '#${item['oid']}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 13),
-                                ),
-                                subtitle: Text(
-                                  '${_formatDate(item['date'])} • ₹${item['grand_total']}',
-                                  style: const TextStyle(fontSize: 11),
-                                ),
-                                trailing: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        _getStatusColor(item['delivery_status'])
-                                            .withAlpha(26),
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  child: Text(
-                                    _getDeliveryStatusString(
-                                            item['delivery_status'])
-                                        .toUpperCase(),
-                                    style: TextStyle(
-                                      color: _getStatusColor(
-                                          item['delivery_status']),
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 9,
+                                    child: Text(
+                                      'Product is not available',
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.grey,
+                                        fontStyle: FontStyle.normal,
+                                      ),
                                     ),
                                   ),
+                                )
+                              : ListView.builder(
+                                  padding: EdgeInsets.zero,
+                                  shrinkWrap: true,
+                                  controller: _dropdownScrollController,
+                                  itemCount: _filteredOrders.length +
+                                      ((_currentPage < _totalPages &&
+                                              (_searchQuery.isEmpty ||
+                                                  _loadingMore))
+                                          ? 1
+                                          : 0),
+                                  itemBuilder: (context, idx) {
+                                    if (idx == _filteredOrders.length) {
+                                      return const Padding(
+                                        padding:
+                                            EdgeInsets.symmetric(vertical: 8.0),
+                                        child: Center(
+                                          child: AppLoader.button(
+                                              color: Color(0xFFFB5404)),
+                                        ),
+                                      );
+                                    }
+
+                                    final item = _filteredOrders[idx];
+                                    return _buildDropdownItem(item);
+                                  },
                                 ),
-                                onTap: () => _handleOrderSelect(item),
-                              );
-                            },
-                          ),
                         ),
                       ],
                     ),
@@ -1005,7 +1135,7 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.network(
-                              'https://d1f02fefkbso7w.cloudfront.net/${data['product_img']}',
+                              CdnConfig.getImageUrl(data['product_img']),
                               fit: BoxFit.contain,
                               errorBuilder: (_, __, ___) => const Icon(
                                   Icons.image,
@@ -1017,13 +1147,36 @@ class _TrackOrderScreenState extends State<TrackOrderScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            data['product_title']?.toString() ?? 'N/A',
+                            (data['product_title'] != null &&
+                                    data['product_title']
+                                        .toString()
+                                        .trim()
+                                        .isNotEmpty &&
+                                    data['product_title']
+                                            .toString()
+                                            .trim()
+                                            .toLowerCase() !=
+                                        'n/a')
+                                ? data['product_title'].toString()
+                                : 'Product is not available',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 13.5,
-                              color: Color(0xFF1E293B),
+                              color: (data['product_title'] != null &&
+                                      data['product_title']
+                                          .toString()
+                                          .trim()
+                                          .isNotEmpty &&
+                                      data['product_title']
+                                              .toString()
+                                              .trim()
+                                              .toLowerCase() !=
+                                          'n/a')
+                                  ? const Color(0xFF1E293B)
+                                  : Colors.red.shade600,
+                              fontStyle: FontStyle.normal,
                             ),
                           ),
                         ),

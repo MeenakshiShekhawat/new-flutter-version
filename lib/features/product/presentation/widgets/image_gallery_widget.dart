@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:share_plus/share_plus.dart';
 import 'inline_product_video_player.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import '../../../../core/state/wishlist_state.dart';
 import '../../../../core/utils/persistent_image_cache_manager.dart';
 
@@ -150,10 +151,11 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
       final url = 'https://www.welfog.com/products/${widget.slug}';
       final price = widget.newPrice ?? widget.oldPrice ?? 0.0;
       final RenderBox? box = context.findRenderObject() as RenderBox?;
-      final rect = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      final rect =
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null;
       await Share.share(
-          '${widget.name} - ₹${price.toStringAsFixed(0)}\nCheck it out: $url',
-          sharePositionOrigin: rect,
+        '${widget.name} - ₹${price.toStringAsFixed(0)}\nCheck it out: $url',
+        sharePositionOrigin: rect,
       );
     } catch (e) {
       debugPrint('Share Error: $e');
@@ -189,9 +191,7 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                     minScale: 0.5,
                     maxScale: 3.0,
                     child: Image.network(
-                      widget.images[idx].startsWith('http')
-                          ? widget.images[idx]
-                          : 'https://d1f02fefkbso7w.cloudfront.net/${widget.images[idx]}',
+                      CdnConfig.getImageUrl(widget.images[idx]),
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -206,9 +206,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
 
   @override
   Widget build(BuildContext context) {
-    // ignore: unused_local_variable
     final screenWidth = MediaQuery.of(context).size.width;
-    final imageHeight = MediaQuery.of(context).size.height * 0.52;
+    final imageHeight = screenWidth;
 
     if (widget.images.isEmpty) {
       return Container(
@@ -220,7 +219,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
     }
 
     final hasVideo = widget.videoUrl != null && widget.videoUrl!.isNotEmpty;
-    final totalCount = hasVideo ? widget.images.length + 1 : widget.images.length;
+    final totalCount =
+        hasVideo ? widget.images.length + 1 : widget.images.length;
 
     return Column(
       children: [
@@ -249,9 +249,7 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                       child: InlineProductVideoPlayer(
                         videoUrl: widget.videoUrl!,
                         placeholderUrl: widget.images.isNotEmpty
-                            ? (widget.images.first.startsWith('http')
-                                ? widget.images.first
-                                : 'https://d1f02fefkbso7w.cloudfront.net/${widget.images.first}')
+                            ? CdnConfig.getImageUrl(widget.images.first)
                             : null,
                         autoPlay: true,
                         loop: true,
@@ -262,9 +260,7 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
 
                   final actualImageIndex = hasVideo ? index - 1 : index;
                   final imgUrl = widget.images[actualImageIndex];
-                  final fullUrl = imgUrl.startsWith('http')
-                      ? imgUrl
-                      : 'https://d1f02fefkbso7w.cloudfront.net/$imgUrl';
+                  final fullUrl = CdnConfig.getImageUrl(imgUrl);
 
                   return GestureDetector(
                     onTap: () => _openFullscreenGallery(actualImageIndex),
@@ -274,7 +270,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                         imageUrl: fullUrl,
                         cacheManager: PersistentImageCacheManager.instance,
                         memCacheWidth: 800,
-                        fit: BoxFit.cover,
+                        fit: BoxFit.contain,
+                        alignment: Alignment.topCenter,
                         width: double.infinity,
                         height: double.infinity,
                         placeholder: (_, __) => const Center(
@@ -284,7 +281,8 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                           ),
                         ),
                         errorWidget: (_, __, ___) => const Center(
-                          child: Icon(Icons.image_not_supported, color: Colors.grey),
+                          child: Icon(Icons.image_not_supported,
+                              color: Colors.grey),
                         ),
                       ),
                     ),
@@ -329,7 +327,7 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                       // Share action
+                      // Share action
                       Builder(
                         builder: (buttonContext) {
                           return GestureDetector(
@@ -364,12 +362,13 @@ class _ImageGalleryWidgetState extends State<ImageGalleryWidget> {
                 ),
               // Pill dot indicator overlay
               Positioned(
-                bottom: 28,
+                bottom: 36,
                 left: 0,
                 right: 0,
                 child: Center(
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       // ignore: deprecated_member_use
                       color: Colors.black.withOpacity(0.15),

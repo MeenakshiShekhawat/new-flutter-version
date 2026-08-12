@@ -18,6 +18,8 @@ import 'widgets/product_other_details_widget.dart';
 import 'widgets/buy_product_widget.dart';
 import 'widgets/buy_product_btn_widget.dart';
 import 'widgets/customer_reviews_widget.dart';
+import '../../home/presentation/home_screen.dart';
+import '../../../core/router/app_router.dart';
 
 class ProductScreen extends StatefulWidget {
   const ProductScreen({super.key, this.item, this.slug});
@@ -53,6 +55,8 @@ class _ProductScreenState extends State<ProductScreen> {
   final GlobalKey _reviewsKey = GlobalKey();
   final GlobalKey _quantitySelectorKey = GlobalKey();
   bool _showStickyQuantity = false;
+  final ValueNotifier<double> _headerOpacityNotifier =
+      ValueNotifier<double>(0.0);
 
   double _lastScrollOffset = 0;
 
@@ -60,12 +64,12 @@ class _ProductScreenState extends State<ProductScreen> {
     if (error == null) return false;
     final str = error.toString().toLowerCase();
     return str.contains('socketexception') ||
-           str.contains('timeout') ||
-           str.contains('failed host lookup') ||
-           str.contains('connection failed') ||
-           str.contains('network') ||
-           str.contains('connect') ||
-           str.contains('clientexception');
+        str.contains('timeout') ||
+        str.contains('failed host lookup') ||
+        str.contains('connection failed') ||
+        str.contains('network') ||
+        str.contains('connect') ||
+        str.contains('clientexception');
   }
 
   @override
@@ -86,12 +90,18 @@ class _ProductScreenState extends State<ProductScreen> {
   void dispose() {
     final slug = widget.slug ?? widget.item?.slug;
     if (slug != null && slug.trim().isNotEmpty) {
-      if (ProductScreen.currentlyVisibleSlug == slug.trim()) {
+      final trimmed = slug.trim();
+      if (ProductScreen.currentlyVisibleSlug == trimmed) {
         ProductScreen.currentlyVisibleSlug = null;
+      }
+      if (AppRouter.lastHandledSlug == trimmed) {
+        AppRouter.lastHandledSlug = null;
+        AppRouter.lastHandledSlugTime = null;
       }
     }
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
+    _headerOpacityNotifier.dispose();
     // Restore default dark status bar icons when leaving product details
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
     super.dispose();
@@ -101,7 +111,10 @@ class _ProductScreenState extends State<ProductScreen> {
     if (!_scrollController.hasClients) return;
     final offset = _scrollController.offset;
 
-    // Status bar remains dark at all times for the white header background.
+    final double opacity = (offset / 200.0).clamp(0.0, 1.0);
+    if (_headerOpacityNotifier.value != opacity) {
+      _headerOpacityNotifier.value = opacity;
+    }
 
     // findRenderObject + localToGlobal walks the render tree — skip it when a
     // state change is impossible:
@@ -116,8 +129,7 @@ class _ProductScreenState extends State<ProductScreen> {
           _quantitySelectorKey.currentContext?.findRenderObject();
       if (renderObject is RenderBox && mounted) {
         final position = renderObject.localToGlobal(Offset.zero);
-        final bool shouldShow =
-            (position.dy + renderObject.size.height) < 100;
+        final bool shouldShow = (position.dy + renderObject.size.height) < 100;
         if (shouldShow != _showStickyQuantity) {
           setState(() {
             _showStickyQuantity = shouldShow;
@@ -164,11 +176,12 @@ class _ProductScreenState extends State<ProductScreen> {
     });
 
     try {
-      final String slugOrId = (slug != null && slug.trim().isNotEmpty) ? slug.trim() : seed!.id;
+      final String slugOrId =
+          (slug != null && slug.trim().isNotEmpty) ? slug.trim() : seed!.id;
       final String productId = seed != null ? seed.id : slugOrId;
 
-      final detail =
-          await _api.fetchProductDetail(slugOrId: slugOrId, productId: productId);
+      final detail = await _api.fetchProductDetail(
+          slugOrId: slugOrId, productId: productId);
       final related = await _api.fetchRelatedProducts(detail.id);
 
       final prefs = await SharedPreferences.getInstance();
@@ -210,7 +223,8 @@ class _ProductScreenState extends State<ProductScreen> {
       final preservedOffset =
           _scrollController.hasClients ? _scrollController.offset : null;
 
-      final detail = await _api.fetchProductDetail(slugOrId: slug, productId: slug);
+      final detail =
+          await _api.fetchProductDetail(slugOrId: slug, productId: slug);
       final related = await _api.fetchRelatedProducts(detail.id);
 
       final prefs = await SharedPreferences.getInstance();
@@ -276,7 +290,10 @@ class _ProductScreenState extends State<ProductScreen> {
       list.removeWhere((item) => (item['id'] ?? 0) == parsedId);
 
       final raw = detail.rawJson;
-      final duration = raw['shop_location']?['duration'] ?? raw['duration'] ?? detail.rawJson['data']?['duration'] ?? 0;
+      final duration = raw['shop_location']?['duration'] ??
+          raw['duration'] ??
+          detail.rawJson['data']?['duration'] ??
+          0;
 
       final Map<String, dynamic> itemMap = {
         'id': parsedId,
@@ -455,10 +472,11 @@ class _ProductScreenState extends State<ProductScreen> {
       final url = 'https://www.welfog.com/products/${_detail!.slug}';
       final price = _detail!.sellPrice;
       final RenderBox? box = context.findRenderObject() as RenderBox?;
-      final rect = box != null ? box.localToGlobal(Offset.zero) & box.size : null;
+      final rect =
+          box != null ? box.localToGlobal(Offset.zero) & box.size : null;
       await Share.share(
-          '${_detail!.name} - ₹${price.toStringAsFixed(0)}\nCheck it out: $url',
-          sharePositionOrigin: rect,
+        '${_detail!.name} - ₹${price.toStringAsFixed(0)}\nCheck it out: $url',
+        sharePositionOrigin: rect,
       );
     } catch (e) {
       debugPrint('Share Error: $e');
@@ -480,7 +498,8 @@ class _ProductScreenState extends State<ProductScreen> {
             elevation: 0,
             scrolledUnderElevation: 0,
             leading: IconButton(
-              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.black, size: 20),
+              icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                  color: Colors.black, size: 20),
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -536,7 +555,8 @@ class _ProductScreenState extends State<ProductScreen> {
                             backgroundColor: const Color(0xFFFB5404),
                             foregroundColor: Colors.white,
                             elevation: 0,
-                            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 36, vertical: 14),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -548,8 +568,9 @@ class _ProductScreenState extends State<ProductScreen> {
                               SizedBox(width: 8),
                               Text(
                                 'Try Again',
-                                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-                                                      ),
+                                style: TextStyle(
+                                    fontSize: 15, fontWeight: FontWeight.bold),
+                              ),
                             ],
                           ),
                         ),
@@ -566,39 +587,21 @@ class _ProductScreenState extends State<ProductScreen> {
 
     final detail = _detail!;
     return RepaintBoundary(
-      child: Scaffold(
+        child: Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
+      body: Stack(
         children: [
-          // Header sits at the top and takes its natural height —
-          // no Stack overlap, no gap on any device.
-          _StaticProductHeader(
-            onBack: () => Navigator.of(context).maybePop(),
-            onSearch: () => Navigator.of(context).pushNamed(AppRoutes.search),
-            onShare: () => _onShare(context),
-            onWishlist: _toggleWishlist,
-            onCartTap: () async {
-              final prefs = await SharedPreferences.getInstance();
-              final token = prefs.getString('access_token') ?? '';
-              if (token.isEmpty) {
-                if (context.mounted) {
-                  Navigator.of(context).pushNamed(AppRoutes.login);
-                }
-                return;
-              }
-              if (context.mounted) {
-                Navigator.of(context).pushNamed(AppRoutes.cart);
-              }
-            },
-            isWishlisted: _isWishlisted,
-          ),
-          // Scrollable content fills the rest of the screen
-          Expanded(
+          // Scrollable content fills the screen (underneath the header)
+          Positioned.fill(
             child: RefreshIndicator(
+              edgeOffset: MediaQuery.paddingOf(context).top + 52.0,
               onRefresh: _load,
               child: ListView(
                 controller: _scrollController,
-                padding: const EdgeInsets.only(bottom: 48),
+
+                padding: const EdgeInsets.only(
+                    bottom:
+                        48), // no top padding so image gallery starts at top
                 children: [
                   ImageGalleryWidget(
                     images: detail.images,
@@ -619,7 +622,8 @@ class _ProductScreenState extends State<ProductScreen> {
                         Container(
                           decoration: const BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                            borderRadius:
+                                BorderRadius.vertical(top: Radius.circular(24)),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -664,6 +668,37 @@ class _ProductScreenState extends State<ProductScreen> {
               ),
             ),
           ),
+          // Scroll-animated header positioned at the top
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: _AnimatedProductHeader(
+              opacityListenable: _headerOpacityNotifier,
+              onBack: () => Navigator.of(context).maybePop(),
+              onSearch: () => Navigator.of(context).pushNamed(AppRoutes.search),
+              onShare: () => _onShare(context),
+              onWishlist: _toggleWishlist,
+              onCartTap: () async {
+                final prefs = await SharedPreferences.getInstance();
+                final token = prefs.getString('access_token') ?? '';
+                if (token.isEmpty) {
+                  if (context.mounted) {
+                    Navigator.of(context).pushNamed(AppRoutes.login);
+                  }
+                  return;
+                }
+                if (context.mounted) {
+                  if (HomeScreen.currentTabBarIndex == 3) {
+                    Navigator.of(context).pop();
+                  } else {
+                    Navigator.of(context).pushNamed(AppRoutes.cart);
+                  }
+                }
+              },
+              isWishlisted: _isWishlisted,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: BuyProductBtnWidget(
@@ -699,7 +734,8 @@ class _ProductScreenState extends State<ProductScreen> {
                     categoryName = rawCat['name']?.toString();
                     categoryId = rawCat['id']?.toString();
                   } else {
-                    categoryName = _detail?.rawJson['category_name']?.toString();
+                    categoryName =
+                        _detail?.rawJson['category_name']?.toString();
                     categoryId = _detail?.rawJson['category_id']?.toString();
                   }
 
@@ -798,14 +834,15 @@ class _ProductScreenState extends State<ProductScreen> {
   }
 }
 
-class _StaticProductHeader extends StatelessWidget {
-  const _StaticProductHeader({
+class _AnimatedProductHeader extends StatelessWidget {
+  const _AnimatedProductHeader({
     required this.onBack,
     required this.onSearch,
     required this.onShare,
     required this.onWishlist,
     required this.onCartTap,
     required this.isWishlisted,
+    required this.opacityListenable,
   });
 
   final VoidCallback onBack;
@@ -814,20 +851,46 @@ class _StaticProductHeader extends StatelessWidget {
   final VoidCallback onWishlist;
   final VoidCallback onCartTap;
   final bool isWishlisted;
+  final ValueNotifier<double> opacityListenable;
 
   Widget _iconBtn({
     required VoidCallback onTap,
     required IconData icon,
     required double size,
-    Color color = const Color(0xFF111827),
+    required double opacity,
+    Color activeColor = const Color(0xFFDC2626),
+    Color inactiveColor = const Color(0xFF111827),
   }) {
     return SizedBox(
       width: 36,
       height: 36,
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        onPressed: onTap,
-        icon: Icon(icon, size: size, color: color),
+      child: Container(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          // ignore: deprecated_member_use
+          color: Colors.white.withOpacity((1.0 - opacity) * 0.9),
+          boxShadow: opacity < 0.8
+              ? [
+                  BoxShadow(
+                    // ignore: deprecated_member_use
+                    color: Colors.black.withOpacity(0.08 * (1.0 - opacity)),
+                    blurRadius: 4,
+                    spreadRadius: 1,
+                  )
+                ]
+              : null,
+        ),
+        child: IconButton(
+          padding: EdgeInsets.zero,
+          onPressed: onTap,
+          icon: Icon(
+            icon,
+            size: size,
+            color: icon == Icons.chevron_left_rounded
+                ? inactiveColor
+                : activeColor,
+          ),
+        ),
       ),
     );
   }
@@ -835,244 +898,113 @@ class _StaticProductHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double topPad = MediaQuery.paddingOf(context).top;
-    return Container(
-      height: topPad + 52,
-      padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
+    return ValueListenableBuilder<double>(
+      valueListenable: opacityListenable,
+      builder: (context, opacity, _) {
+        final bool isTransparent = opacity < 0.5;
+        SystemChrome.setSystemUIOverlayStyle(
+          isTransparent
+              ? SystemUiOverlayStyle.light
+              : SystemUiOverlayStyle.dark,
+        );
+        return Container(
+          height: topPad + 52,
+          padding: EdgeInsets.only(top: topPad, left: 8, right: 8),
+          decoration: BoxDecoration(
             // ignore: deprecated_member_use
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          _iconBtn(
-            onTap: onBack,
-            icon: Icons.chevron_left_rounded,
-            size: 28,
-          ),
-          const Spacer(),
-          _iconBtn(
-            onTap: onSearch,
-            icon: Icons.search_rounded,
-            size: 22,
-            color: const Color(0xFFDC2626),
-          ),
-          const SizedBox(width: 2),
-          _iconBtn(
-            onTap: onShare,
-            icon: Icons.share_outlined,
-            size: 20,
-            color: const Color(0xFFDC2626),
-          ),
-          const SizedBox(width: 2),
-          _iconBtn(
-            onTap: onWishlist,
-            icon: isWishlisted
-                ? Icons.favorite
-                : Icons.favorite_border_rounded,
-            size: 20,
-            color: const Color(0xFFDC2626),
-          ),
-          const SizedBox(width: 2),
-          // Cart icon with live badge
-          ValueListenableBuilder<int>(
-            valueListenable: CartState.cartCountNotifier,
-            builder: (context, cartCount, _) {
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  _iconBtn(
-                    onTap: onCartTap,
-                    icon: Icons.shopping_cart_outlined,
-                    size: 20,
-                    color: const Color(0xFFDC2626),
-                  ),
-                  if (cartCount > 0)
-                    Positioned(
-                      right: 0,
-                      top: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFDC2626),
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '$cartCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
+            color: Colors.white.withOpacity(opacity),
+            boxShadow: opacity > 0.1
+                ? [
+                    BoxShadow(
+                      // ignore: deprecated_member_use
+                      color: Colors.black.withOpacity(0.06 * opacity),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
                     ),
-                ],
-              );
-            },
+                  ]
+                : null,
           ),
-        ],
-      ),
-    );
-  }
-}
-
-// ignore: unused_element
-class _ProductHeader extends StatelessWidget {
-  const _ProductHeader({
-    required this.onBack,
-    required this.onSearch,
-    required this.onShare,
-    required this.onWishlist,
-    required this.onCartTap,
-    required this.isWishlisted,
-    required this.t,
-  });
-
-  final VoidCallback onBack;
-  final VoidCallback onSearch;
-  final VoidCallback onShare;
-  final VoidCallback onWishlist;
-  final VoidCallback onCartTap;
-  final bool isWishlisted;
-  final double t;
-
-  Widget _buildHeaderButton({
-    required VoidCallback onTap,
-    required IconData icon,
-    required double iconSize,
-    required Color iconColor,
-    required double t,
-  }) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4),
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color.lerp(
-          // ignore: deprecated_member_use
-          Colors.black.withOpacity(0.35),
-          Colors.transparent,
-          t,
-        ),
-      ),
-      child: IconButton(
-        padding: EdgeInsets.zero,
-        onPressed: onTap,
-        icon: Icon(icon, size: iconSize, color: iconColor),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final double topSafeArea = MediaQuery.paddingOf(context).top;
-    return Container(
-      height: topSafeArea + 52,
-      padding: EdgeInsets.only(top: topSafeArea, left: 8, right: 8),
-      decoration: BoxDecoration(
-        // ignore: deprecated_member_use
-        color: Colors.white.withOpacity(t),
-        boxShadow: t > 0.1
-            ? [
-                BoxShadow(
-                  // ignore: deprecated_member_use
-                  color: Colors.black.withOpacity(0.05 * t),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ]
-            : null,
-      ),
-      child: Row(
-        children: [
-          _buildHeaderButton(
-            onTap: onBack,
-            icon: Icons.chevron_left_rounded,
-            iconSize: 28,
-            iconColor: Color.lerp(Colors.white, const Color(0xFF111827), t)!,
-            t: t,
-          ),
-          const Spacer(),
-          _buildHeaderButton(
-            onTap: onSearch,
-            icon: Icons.search_rounded,
-            iconSize: 22,
-            iconColor: Color.lerp(Colors.white, const Color(0xFFDC2626), t)!,
-            t: t,
-          ),
-          _buildHeaderButton(
-            onTap: onShare,
-            icon: Icons.share_outlined,
-            iconSize: 20,
-            iconColor: Color.lerp(Colors.white, const Color(0xFFDC2626), t)!,
-            t: t,
-          ),
-          _buildHeaderButton(
-            onTap: onWishlist,
-            icon: isWishlisted ? Icons.favorite : Icons.favorite_border_rounded,
-            iconSize: 20,
-            iconColor: isWishlisted
-                ? const Color(0xFFDC2626)
-                : Color.lerp(Colors.white, const Color(0xFFDC2626), t)!,
-            t: t,
-          ),
-          ValueListenableBuilder<int>(
-            valueListenable: CartState.cartCountNotifier,
-            builder: (context, cartCount, _) {
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  _buildHeaderButton(
-                    onTap: onCartTap,
-                    icon: Icons.shopping_cart_outlined,
-                    iconSize: 20,
-                    iconColor: Color.lerp(Colors.white, const Color(0xFFDC2626), t)!,
-                    t: t,
-                  ),
-                  if (cartCount > 0)
-                    Positioned(
-                      top: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(2),
-                        decoration: const BoxDecoration(
-                          color: Color(0xFFDC2626),
-                          shape: BoxShape.circle,
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: Text(
-                          '$cartCount',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
+          child: Row(
+            children: [
+              _iconBtn(
+                onTap: onBack,
+                icon: Icons.chevron_left_rounded,
+                size: 28,
+                opacity: opacity,
+                inactiveColor: const Color(0xFF111827),
+              ),
+              const Spacer(),
+              _iconBtn(
+                onTap: onSearch,
+                icon: Icons.search_rounded,
+                size: 22,
+                opacity: opacity,
+              ),
+              const SizedBox(width: 4),
+              _iconBtn(
+                onTap: onShare,
+                icon: Icons.share_outlined,
+                size: 20,
+                opacity: opacity,
+              ),
+              const SizedBox(width: 4),
+              _iconBtn(
+                onTap: onWishlist,
+                icon: isWishlisted
+                    ? Icons.favorite
+                    : Icons.favorite_border_rounded,
+                size: 20,
+                opacity: opacity,
+              ),
+              const SizedBox(width: 4),
+              // Cart icon with live badge
+              ValueListenableBuilder<int>(
+                valueListenable: CartState.cartCountNotifier,
+                builder: (context, cartCount, _) {
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      _iconBtn(
+                        onTap: onCartTap,
+                        icon: Icons.shopping_cart_outlined,
+                        size: 20,
+                        opacity: opacity,
                       ),
-                    ),
-                ],
-              );
-            },
+                      if (cartCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: IgnorePointer(
+                            child: Container(
+                              padding: const EdgeInsets.all(2),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFDC2626),
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 14,
+                                minHeight: 14,
+                              ),
+                              child: Text(
+                                '$cartCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

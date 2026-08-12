@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class ShopDetail {
   const ShopDetail({
@@ -138,8 +139,7 @@ class ShopProduct {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 

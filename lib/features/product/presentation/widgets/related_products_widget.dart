@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class RelatedProductsWidget extends StatefulWidget {
   final String productId;
@@ -137,7 +138,9 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                 // ignore: prefer_const_constructors
                 child: Row(
                   children: const [
-                    Text('Explore All', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    Text('Explore All',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold)),
                     SizedBox(width: 4),
                     Icon(Icons.arrow_forward, size: 18),
                   ],
@@ -155,13 +158,16 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
               crossAxisCount: 2,
               crossAxisSpacing: 8,
               mainAxisSpacing: 8,
-              childAspectRatio: MediaQuery.of(context).size.width < 380 ? 0.52 : 0.57,
+              childAspectRatio:
+                  MediaQuery.of(context).size.width < 380 ? 0.52 : 0.57,
             ),
             itemCount: _products.length,
             itemBuilder: (context, index) {
               final item = _products[index];
-              final price = double.tryParse((item['main_price'] ?? 0).toString()) ?? 0.0;
-              final oldPrice = double.tryParse((item['old_price'] ?? 0).toString()) ?? 0.0;
+              final price =
+                  double.tryParse((item['main_price'] ?? 0).toString()) ?? 0.0;
+              final oldPrice =
+                  double.tryParse((item['old_price'] ?? 0).toString()) ?? 0.0;
               final discount = item['data']?['discount'] ?? 0;
 
               return GestureDetector(
@@ -180,7 +186,8 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                 },
                 child: Card(
                   elevation: 1,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -191,9 +198,11 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                             Container(
                               width: double.infinity,
                               decoration: BoxDecoration(
-                                borderRadius: const BorderRadius.vertical(top: Radius.circular(8)),
+                                borderRadius: const BorderRadius.vertical(
+                                    top: Radius.circular(8)),
                                 image: DecorationImage(
-                                  image: NetworkImage('https://d1f02fefkbso7w.cloudfront.net/${item['thumbnail_image']}'),
+                                  image: NetworkImage(
+                                      CdnConfig.getImageUrl(item['thumbnail_image'])),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -203,11 +212,15 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                                 top: 8,
                                 left: 8,
                                 child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
                                   color: const Color(0xFFFB5404),
                                   child: Text(
                                     '$discount% OFF',
-                                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold),
                                   ),
                                 ),
                               ),
@@ -224,7 +237,8 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                               item['name'] ?? '',
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             const SizedBox(height: 4),
                             Wrap(
@@ -232,18 +246,25 @@ class _RelatedProductsWidgetState extends State<RelatedProductsWidget> {
                               spacing: 6,
                               runSpacing: 2,
                               children: [
-                                Text('₹${price.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                Text('₹${price.toStringAsFixed(0)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14)),
                                 if (oldPrice > price)
                                   Text(
                                     '₹${oldPrice.toStringAsFixed(0)}',
-                                    style: const TextStyle(decoration: TextDecoration.lineThrough, color: Colors.grey, fontSize: 12),
+                                    style: const TextStyle(
+                                        decoration: TextDecoration.lineThrough,
+                                        color: Colors.grey,
+                                        fontSize: 12),
                                   ),
                               ],
                             ),
                             const SizedBox(height: 4),
                             Text(
                               _formatDeliveryTime(item['duration']),
-                              style: const TextStyle(color: Colors.grey, fontSize: 11),
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 11),
                             ),
                           ],
                         ),

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 import 'widgets/checkout_address_widget.dart';
 
 class ConfirmAddressScreen extends StatefulWidget {
@@ -392,12 +393,17 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
 
   @override
   Widget build(BuildContext context) {
-    final grandTotal = double.tryParse((_cartSummary['grand_total'] ?? 0).toString().replaceAll(',', '')) ?? 0.0;
-    final profit = double.tryParse((_cartSummary['profit'] ?? 0).toString().replaceAll(',', '')) ?? 0.0;
+    final grandTotal = double.tryParse((_cartSummary['grand_total'] ?? 0)
+            .toString()
+            .replaceAll(',', '')) ??
+        0.0;
+    final profit = double.tryParse(
+            (_cartSummary['profit'] ?? 0).toString().replaceAll(',', '')) ??
+        0.0;
     final originalTotal = grandTotal + profit;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF6F6F6),
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -618,7 +624,7 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                 ),
                                 const SizedBox(height: 12),
                                 if (_cartItems.isNotEmpty)
-                                   ..._cartItems.map((item) {
+                                  ..._cartItems.map((item) {
                                     final double mrp = double.tryParse(
                                             (item['mrp'] ?? 0).toString()) ??
                                         0.0;
@@ -626,7 +632,8 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                             (item['price'] ?? 0).toString()) ??
                                         0.0;
                                     final int quantity = int.tryParse(
-                                            (item['quantity'] ?? 1).toString()) ??
+                                            (item['quantity'] ?? 1)
+                                                .toString()) ??
                                         1;
                                     final double saved =
                                         mrp > price ? (mrp - price) : 0.0;
@@ -646,7 +653,7 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                             borderRadius:
                                                 BorderRadius.circular(8),
                                             child: Image.network(
-                                              'https://d1f02fefkbso7w.cloudfront.net/${item['product_thumbnail_image']}',
+                                              CdnConfig.getImageUrl(item['product_thumbnail_image']),
                                               width: 80,
                                               height: 80,
                                               fit: BoxFit.cover,
@@ -689,8 +696,11 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                                         '₹${mrp.toStringAsFixed(0)}',
                                                         style: const TextStyle(
                                                           fontSize: 12,
-                                                          color: Color(0xFF999999),
-                                                          decoration: TextDecoration.lineThrough,
+                                                          color:
+                                                              Color(0xFF999999),
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
                                                         ),
                                                       ),
                                                       const SizedBox(width: 4),
@@ -698,7 +708,8 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                                     Text(
                                                       '₹${price.toStringAsFixed(0)}',
                                                       style: const TextStyle(
-                                                          fontWeight: FontWeight.bold,
+                                                          fontWeight:
+                                                              FontWeight.bold,
                                                           color: Colors.black),
                                                     ),
                                                     if (pct > 0) ...[
@@ -706,8 +717,10 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                                       Text(
                                                         '$pct% OFF',
                                                         style: const TextStyle(
-                                                            color: Color(0xFF008083),
-                                                            fontWeight: FontWeight.w700,
+                                                            color: Color(
+                                                                0xFF008083),
+                                                            fontWeight:
+                                                                FontWeight.w700,
                                                             fontSize: 11),
                                                       ),
                                                     ],
@@ -715,13 +728,17 @@ class _ConfirmAddressScreenState extends State<ConfirmAddressScreen>
                                                 ),
                                                 if (quantity > 1)
                                                   Padding(
-                                                    padding: const EdgeInsets.only(top: 3),
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 3),
                                                     child: Text(
                                                       'Qty: $quantity x ₹${price.toStringAsFixed(0)}',
                                                       style: const TextStyle(
-                                                          color: Color(0xFF666666),
+                                                          color:
+                                                              Color(0xFF666666),
                                                           fontSize: 12,
-                                                          fontWeight: FontWeight.w500),
+                                                          fontWeight:
+                                                              FontWeight.w500),
                                                     ),
                                                   ),
                                                 if (totalSaved > 0)

@@ -4,10 +4,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'shop_models.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class ShopApiService {
   static const _baseUrl = 'https://welfogapi.welfog.com/api/v2';
-  static const _cdnBase = 'https://d1f02fefkbso7w.cloudfront.net/';
+  static const _cdnBase = CdnConfig.imageCdn;
 
   /// Local defaults — remote `_nuxt/img/nobanner.*.png` URLs are dead (404).
   static const defaultBannerAsset = 'assets/images/shop_default_banner.png';
