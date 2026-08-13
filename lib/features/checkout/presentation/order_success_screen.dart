@@ -185,9 +185,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                     center: const Alignment(0, -0.9),
                     radius: 1.1,
                     colors: [
-                      // ignore: deprecated_member_use
                       OrderSuccessScreen.brand.withOpacity(0.12),
-                      // ignore: deprecated_member_use
                       Colors.white.withOpacity(0),
                     ],
                   ),
@@ -241,7 +239,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                           const SizedBox(height: 8),
                           FadeTransition(
                             opacity: _fade(0.22),
-                            // ignore: prefer_const_constructors
                             child: Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 34),
@@ -289,7 +286,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                                   foregroundColor: Colors.white,
                                   elevation: 3,
                                   shadowColor:
-                                      // ignore: deprecated_member_use
                                       OrderSuccessScreen.brand.withOpacity(0.3),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
@@ -337,23 +333,29 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                             ),
                           ),
                           const SizedBox(height: 16),
-                          RichText(
-                            text: const TextSpan(
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: OrderSuccessScreen.inkFaint,
-                              ),
-                              children: [
-                                TextSpan(text: 'Need help? '),
-                                TextSpan(
-                                  text: 'Contact Support',
-                                  style: TextStyle(
-                                    color: OrderSuccessScreen.teal,
-                                    fontWeight: FontWeight.w700,
-                                  ),
+                          GestureDetector(
+                            onTap: () {
+                              _cancelTimer();
+                              Navigator.of(context).pushNamed(AppRoutes.contactSupport);
+                            },
+                            child: RichText(
+                              text: const TextSpan(
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: OrderSuccessScreen.inkFaint,
                                 ),
-                              ],
+                                children: [
+                                  TextSpan(text: 'Need help? '),
+                                  TextSpan(
+                                    text: 'Contact Support',
+                                    style: TextStyle(
+                                      color: OrderSuccessScreen.teal,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ],
@@ -394,7 +396,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
               child: CustomPaint(
                 size: const Size(96, 96),
                 painter: _DashedRingPainter(
-                  // ignore: deprecated_member_use
                   color: OrderSuccessScreen.brand.withOpacity(0.35),
                 ),
               ),
@@ -408,7 +409,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    // ignore: deprecated_member_use
                     color: OrderSuccessScreen.brand.withOpacity(0.22),
                     blurRadius: 34,
                     offset: const Offset(0, 14),
@@ -503,7 +503,7 @@ class _ConfettiPainter extends CustomPainter {
       final dy = origin.dy + eased * c.ty;
       final scale = 0.5 + eased * 0.5;
       final rotation = eased * c.rotation * pi / 180;
-      // ignore: deprecated_member_use
+
       final paint = Paint()..color = c.color.withOpacity(opacity.clamp(0, 1));
 
       canvas.save();
