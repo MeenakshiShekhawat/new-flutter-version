@@ -28,7 +28,6 @@ class _AccountScreenState extends State<AccountScreen> {
   // Purely visual — shows a brief cursor-line flash when the search bar is
   // pressed. Does not make the field editable; tap still navigates via
   // _openPlayRoute like before.
- 
 
   // ---- Menu items, grouped exactly like the reference design ----
   // (unchanged keys/behaviour — only the visual grouping/order is new)
@@ -213,9 +212,10 @@ class _AccountScreenState extends State<AccountScreen> {
       // Use pre-warmed route if available (built when tab became active),
       // otherwise fall back to async build. The pre-warm eliminates the
       // SharedPreferences + API call delay on the tap path.
-      final routeWithSession = (_prewarmedPlayRoute != null && routeName == play.AppRoutes.myProfile)
-          ? _prewarmedPlayRoute!
-          : await _buildPlayRouteWithSession(routeName);
+      final routeWithSession =
+          (_prewarmedPlayRoute != null && routeName == play.AppRoutes.myProfile)
+              ? _prewarmedPlayRoute!
+              : await _buildPlayRouteWithSession(routeName);
       _prewarmedPlayRoute = null; // consume — re-warm on next activation
 
       final route = play.AppRoutes.onGenerateRoute(
@@ -263,8 +263,8 @@ class _AccountScreenState extends State<AccountScreen> {
           children: [
             _buildHeaderCard(name: name, phone: phone, initials: initials),
             const SizedBox(height: 16),
-            _buildStatsRow(),
-            const SizedBox(height: 16),
+            // _buildStatsRow(),
+            // const SizedBox(height: 16),
             _buildSearchBar(),
             const SizedBox(height: 20),
             _sectionLabel('YOUR ACCOUNT'),
@@ -341,6 +341,7 @@ class _AccountScreenState extends State<AccountScreen> {
             height: 56,
             alignment: Alignment.center,
             decoration: BoxDecoration(
+              // ignore: deprecated_member_use
               color: Colors.white.withOpacity(0.22),
               borderRadius: BorderRadius.circular(16),
             ),
@@ -381,6 +382,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   phone.isEmpty ? '—' : phone,
                   style: TextStyle(
                     fontSize: 13,
+                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.9),
                   ),
                 ),
@@ -391,6 +393,7 @@ class _AccountScreenState extends State<AccountScreen> {
             onPressed: () => Navigator.of(context).pushNamed(AppRoutes.profile),
             style: OutlinedButton.styleFrom(
               foregroundColor: Colors.white,
+              // ignore: deprecated_member_use
               side: BorderSide(color: Colors.white.withOpacity(0.6)),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(
@@ -405,6 +408,7 @@ class _AccountScreenState extends State<AccountScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildStatsRow() {
     return Container(
       decoration: BoxDecoration(
@@ -428,8 +432,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   iconBg: const Color(0xFFFFE9D6),
                   value: _ordersCount?.toString() ?? '—',
                   label: 'ORDERS',
-               
-                   
                 ),
               ),
               const _StatDivider(),
@@ -440,7 +442,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   iconBg: const Color(0xFFCCFBF1),
                   value: _wishlistCount?.toString() ?? '—',
                   label: 'WISHLIST',
-                 
                 ),
               ),
               const _StatDivider(),
@@ -451,7 +452,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   iconBg: const Color(0xFFFFE9D6),
                   value: _cartCount?.toString() ?? '—',
                   label: 'CART',
-                 
                 ),
               ),
             ],
@@ -518,33 +518,32 @@ class _AccountScreenState extends State<AccountScreen> {
     return InkWell(
       borderRadius: BorderRadius.circular(30),
       onTap: () => _openPlayRoute(play.AppRoutes.search),
-     
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-  color: const Color(0xFFE5E5E5),
-),
+          border: Border.all(
+            color: const Color(0xFFE5E5E5),
+          ),
         ),
         child: Row(
-  children: [
-    const Icon(
-      Icons.search_rounded,
-      color: Color(0xFF9CA3AF),
-    ),
-    const SizedBox(width: 10),
-Expanded(
-  child: const Text(
-    'Search Welfog videos',
-    style: TextStyle(
-      color: Color(0xFF9CA3AF),
-    ),
-  ),
-),
-  ],
-),
+          children: [
+            const Icon(
+              Icons.search_rounded,
+              color: Color(0xFF9CA3AF),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: const Text(
+                'Search Welfog videos',
+                style: TextStyle(
+                  color: Color(0xFF9CA3AF),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

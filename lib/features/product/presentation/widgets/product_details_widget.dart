@@ -8,6 +8,8 @@ import 'package:http/http.dart' as http;
 import '../../../../core/constants/app_routes.dart';
 import 'package:welfog/core/config/cdn_config.dart';
 import '../../../../core/utils/top_toast.dart';
+import 'package:geolocator/geolocator.dart';
+import '../../../address/presentation/location_picker_screen.dart';
 
 class ProductDetailsWidget extends StatefulWidget {
   final Map<String, dynamic> data;
@@ -35,7 +37,6 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
   bool _checkingDelivery = false;
   String _lastCheckedPin = '';
   dynamic _checkedPincodeDuration;
-  bool _showPincodeInput = false;
 
   int _apiTotalReviews = 0;
   double _apiRating = 0.0;
@@ -121,13 +122,16 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
     }
   }
 
-  Future<void> _checkDelivery(String pin) async {
+  Future<Map<String, dynamic>> _checkDelivery(String pin) async {
     if (pin.trim().isEmpty) {
       setState(() {
         _errorMessage = 'Please enter a pincode first.';
         _deliveryMessage = '';
       });
-      return;
+      return {
+        'success': false,
+        'message': 'Please enter a pincode first.',
+      };
     }
 
     setState(() {
@@ -187,29 +191,27 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
       final uri =
           Uri.parse('https://welfogapi.welfog.com/api/v2/pincode/check');
 
-      // debugPrint('🔍 Outgoing Pincode Check Payload: ${jsonEncode(payload)}');
-      // debugPrint('🔍 Outgoing Headers: $headers');
-
       final response = await http.post(
         uri,
         headers: headers,
         body: jsonEncode(payload),
       );
 
-      // debugPrint('🔍 Response Status Code: ${response.statusCode}');
-      // debugPrint('🔍 Response Body: ${response.body}');
-
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['result'] == true && mounted) {
+          final String msg = data['message'] ?? 'Product available for delivery';
+          final duration = data['duration'] ?? data['data']?['duration'];
           setState(() {
-            _deliveryMessage =
-                data['message'] ?? 'Product available for delivery';
+            _deliveryMessage = msg;
             _errorMessage = '';
-            _checkedPincodeDuration =
-                data['duration'] ?? data['data']?['duration'];
-            _showPincodeInput = false;
+            _checkedPincodeDuration = duration;
           });
+          return {
+            'success': true,
+            'message': msg,
+            'duration': duration,
+          };
         } else {
           setState(() {
             _errorMessage = 'Delivery not available to';
@@ -219,6 +221,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
           if (mounted) {
             TopToast.show(context, 'Delivery not available to $pin');
           }
+          return {
+            'success': false,
+            'message': 'Delivery not available to $pin',
+          };
         }
       } else {
         setState(() {
@@ -229,6 +235,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
         if (mounted) {
           TopToast.show(context, 'Delivery not available to $pin');
         }
+        return {
+          'success': false,
+          'message': 'Delivery not available to $pin',
+        };
       }
     } catch (e) {
       setState(() {
@@ -239,6 +249,10 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
       if (mounted) {
         TopToast.show(context, 'Delivery not available to $pin');
       }
+      return {
+        'success': false,
+        'message': 'Delivery not available to $pin',
+      };
     } finally {
       if (mounted) {
         setState(() {
@@ -456,8 +470,9 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
     final variants = widget.data['variant_products'] ??
         widget.data['product']?['variant_products'] as Map<String, dynamic>?;
 
-    final bool isCheckDisabled =
-        _checkingDelivery || _pincodeController.text == _lastCheckedPin;
+    final bool isCheckDisabled = _checkingDelivery ||
+        _pincodeController.text == _lastCheckedPin ||
+        _pincodeController.text.length < 6;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -664,21 +679,25 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                           child: Container(
                             alignment: Alignment.center,
                             padding: const EdgeInsets.symmetric(horizontal: 28),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFFEF2EB), // peach background
-                              borderRadius: BorderRadius.only(
+                            decoration: BoxDecoration(
+                              color: isCheckDisabled
+                                  ? const Color(0xFFF3F4F6) // Muted background
+                                  : const Color(0xFFFEF2EB), // peach background
+                              borderRadius: const BorderRadius.only(
                                 topRight: Radius.circular(23),
                                 bottomRight: Radius.circular(23),
                               ),
-                              border: Border(
+                              border: const Border(
                                 left: BorderSide(
                                     color: Color(0xFFE5E7EB), width: 1.2),
                               ),
                             ),
                             child: Text(
                               _checkingDelivery ? 'Checking...' : 'Apply',
-                              style: const TextStyle(
-                                color: Color(0xFFFB5404),
+                              style: TextStyle(
+                                color: isCheckDisabled
+                                    ? const Color(0xFF9CA3AF) // Muted text color
+                                    : const Color(0xFFFB5404),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
                               ),
@@ -760,141 +779,28 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _showPincodeInput = !_showPincodeInput;
-                            if (_showPincodeInput) {
-                              _pincodeController.text = _lastCheckedPin;
-                            } else {
-                              _pincodeController.clear();
-                            }
-                          });
-                        },
-                        child: _showPincodeInput
-                            ? Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      const Color(0xFFFB5404), // solid orange
-                                  borderRadius:
-                                      BorderRadius.circular(20), // pill shape
-                                ),
-                                child: const Text(
-                                  'Cancel',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 6),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: const Color(0xFFFB5404)),
-                                ),
-                                child: const Text(
-                                  'Change',
-                                  style: TextStyle(
-                                    color: Color(0xFFFB5404),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ),
+                        onTap: () => _openPincodeBottomSheet(context),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                                color: const Color(0xFFFB5404)),
+                          ),
+                          child: const Text(
+                            'Change',
+                            style: TextStyle(
+                              color: Color(0xFFFB5404),
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-                if (_showPincodeInput) ...[
-                  const SizedBox(height: 12),
-                  IntrinsicHeight(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        border: Border.all(
-                            color: const Color(0xFFFB5404), width: 1.2),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(left: 20),
-                              child: TextField(
-                                controller: _pincodeController,
-                                keyboardType: TextInputType.number,
-                                maxLength: 6,
-                                buildCounter: (context,
-                                        {required currentLength,
-                                        required isFocused,
-                                        maxLength}) =>
-                                    null,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Color(0xFF1F2937)),
-                                onChanged: (value) {
-                                  setState(() {});
-                                },
-                                decoration: const InputDecoration(
-                                  hintText: 'Enter Pincode',
-                                  hintStyle: TextStyle(
-                                      color: Colors.grey,
-                                      fontWeight: FontWeight.normal),
-                                  counterText: '',
-                                  contentPadding:
-                                      EdgeInsets.symmetric(vertical: 14),
-                                  isDense: true,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                  errorBorder: InputBorder.none,
-                                  disabledBorder: InputBorder.none,
-                                  focusedErrorBorder: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: isCheckDisabled || _checkingDelivery
-                                ? null
-                                : () => _checkDelivery(_pincodeController.text),
-                            child: Container(
-                              alignment: Alignment.center,
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 28),
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFFEF2EB), // peach background
-                                borderRadius: BorderRadius.only(
-                                  topRight: Radius.circular(23),
-                                  bottomRight: Radius.circular(23),
-                                ),
-                                border: Border(
-                                  left: BorderSide(
-                                      color: Color(0xFFE5E7EB), width: 1.2),
-                                ),
-                              ),
-                              child: Text(
-                                _checkingDelivery ? 'Checking...' : 'Apply',
-                                style: const TextStyle(
-                                  color: Color(0xFFFB5404),
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 15,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
                 if (_deliveryMessage.isNotEmpty) ...[
                   const SizedBox(
                       height: 6), // slightly increased vertical space
@@ -1333,6 +1239,725 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
               );
             }),
         ],
+      ),
+    );
+  }
+
+  void _openPincodeBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _PincodeBottomSheetContent(
+        initialPincode: _lastCheckedPin,
+        checkingDelivery: _checkingDelivery,
+        onApply: (pin) => _checkDelivery(pin),
+      ),
+    );
+  }
+}
+
+class _PincodeBottomSheetContent extends StatefulWidget {
+  final String initialPincode;
+  final bool checkingDelivery;
+  final Future<Map<String, dynamic>> Function(String pincode) onApply;
+
+  const _PincodeBottomSheetContent({
+    required this.initialPincode,
+    required this.checkingDelivery,
+    required this.onApply,
+  });
+
+  @override
+  State<_PincodeBottomSheetContent> createState() =>
+      __PincodeBottomSheetContentState();
+}
+
+class __PincodeBottomSheetContentState
+    extends State<_PincodeBottomSheetContent> {
+  late final TextEditingController _controller;
+  bool _isLoading = false;
+
+  // Local state for checking status inside the bottom sheet
+  String? _deliveryMessage;
+  String? _errorMessage;
+  dynamic _checkedPincodeDuration;
+
+  // Local state for user saved addresses
+  List<dynamic> _addresses = [];
+  bool _loadingAddresses = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialPincode);
+    _controller.addListener(_onTextChanged);
+    _fetchAddresses();
+  }
+
+  void _onTextChanged() {
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchAddresses() async {
+    setState(() => _loadingAddresses = true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId == null) return;
+
+      final uri = Uri.parse(
+        'https://welfogapi.welfog.com/api/v2/allAddress/$userId?id=$userId',
+      );
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['result'] == true) {
+          final addData = data['addData'] as List? ?? [];
+          if (mounted) {
+            setState(() {
+              _addresses = addData;
+            });
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching addresses in bottom sheet: $e');
+    } finally {
+      if (mounted) {
+        setState(() => _loadingAddresses = false);
+      }
+    }
+  }
+
+  Future<void> _selectSavedAddress(Map<String, dynamic> addr) async {
+    final String id = (addr['id'] ?? '').toString();
+    final String pincode = (addr['postal_code']?.toString() ?? '').trim();
+    if (id.isEmpty) return;
+
+    setState(() {
+      _isLoading = true;
+      _deliveryMessage = null;
+      _errorMessage = null;
+    });
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getString('user_id');
+      if (userId == null) return;
+
+      // Save locally
+      await prefs.setString('latitude', addr['latitude']?.toString() ?? '0');
+      await prefs.setString('longitude', addr['longitude']?.toString() ?? '0');
+      await prefs.setString('city_name', addr['city_name']?.toString() ?? '');
+      await prefs.setString('postal_code', pincode);
+
+      final uri = Uri.parse(
+        'https://welfogapi.welfog.com/api/v2/selectAnAddress/$id?id=$id&user_id=$userId',
+      );
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['result'] == true) {
+          setState(() {
+            _addresses = _addresses.map((a) {
+              final mutable = Map<String, dynamic>.from(a as Map);
+              if (mutable['id']?.toString() == id) {
+                mutable['using_this'] = 1;
+              } else {
+                mutable['using_this'] = 0;
+              }
+              return mutable;
+            }).toList();
+          });
+
+          _controller.text = pincode;
+          _onTextChanged();
+          await _handleCheckPincode(pincode);
+          return;
+        }
+      }
+
+      setState(() {
+        _errorMessage = 'Failed to select address on server.';
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error selecting address: $e';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleCheckPincode(String pin) async {
+    final navigator = Navigator.of(context);
+    setState(() {
+      _isLoading = true;
+      _deliveryMessage = null;
+      _errorMessage = null;
+    });
+
+    try {
+      final result = await widget.onApply(pin);
+      if (mounted) {
+        setState(() {
+          if (result['success'] == true) {
+            _deliveryMessage = result['message'] ?? 'Product available for delivery';
+            _checkedPincodeDuration = result['duration'];
+            _errorMessage = null;
+          } else {
+            _errorMessage = result['message'] ?? 'Delivery not available to $pin';
+            _deliveryMessage = null;
+          }
+        });
+
+        // If validation was successful, auto-dismiss the bottom sheet after a short delay (1.5 seconds)
+        if (result['success'] == true) {
+          Future.delayed(const Duration(milliseconds: 1500), () {
+            if (navigator.mounted) {
+              navigator.pop();
+            }
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error validating pincode: $e';
+          _deliveryMessage = null;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleCurrentLocation() async {
+    setState(() {
+      _isLoading = true;
+      _deliveryMessage = null;
+      _errorMessage = null;
+    });
+
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Location permission denied.';
+          });
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Location permission permanently denied. Enable in settings.';
+        });
+        return;
+      }
+
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+        ),
+      );
+
+      final double lat = position.latitude;
+      final double lng = position.longitude;
+      const String apiKey = "AIzaSyBcHzsB2kgoQa01PHIuYhVYeiCZlSiyXNo";
+      final uri = Uri.parse(
+        "https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey",
+      );
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['results'] != null && (data['results'] as List).isNotEmpty) {
+          final firstResult = data['results'][0];
+          final addressComponents = firstResult['address_components'] as List;
+
+          String pincode = '';
+          for (var comp in addressComponents) {
+            final types = comp['types'] as List;
+            if (types.contains('postal_code')) {
+              pincode = comp['long_name']?.toString() ?? '';
+              break;
+            }
+          }
+
+          if (pincode.isNotEmpty) {
+            _controller.text = pincode;
+            _onTextChanged();
+            await _handleCheckPincode(pincode);
+          } else {
+            setState(() {
+              _isLoading = false;
+              _errorMessage = 'Pincode not found for current location.';
+            });
+          }
+        } else {
+          setState(() {
+            _isLoading = false;
+            _errorMessage = 'Could not resolve current location.';
+          });
+        }
+      } else {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to fetch location details.';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Error getting current location: $e';
+      });
+    }
+  }
+
+  Future<void> _handleSearchLocation() async {
+    try {
+      final selectedPincode = await Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (context) => const LocationPickerScreen(
+            forceGPS: true,
+            pickPincodeOnly: true,
+          ),
+        ),
+      );
+
+      if (selectedPincode != null &&
+          selectedPincode is String &&
+          selectedPincode.isNotEmpty) {
+        _controller.text = selectedPincode;
+        _onTextChanged();
+        await _handleCheckPincode(selectedPincode);
+      }
+    } catch (e) {
+      debugPrint('Search Location Error: $e');
+    }
+  }
+
+  String _formatDeliveryTime(dynamic duration) {
+    if (duration == null) return '2 - 4 days';
+    final double? parsedVal = double.tryParse(duration.toString());
+    if (parsedVal == null || parsedVal < 0) {
+      return '2 - 4 days';
+    }
+
+    final int minutes = parsedVal.toInt();
+    final int days = minutes ~/ 1440;
+
+    if (days > 0) {
+      final int min = days;
+      final int max = days + 1;
+      return '$min - $max days';
+    }
+
+    final int hours = (minutes % 1440) ~/ 60;
+    final int mins = minutes % 60;
+
+    String result = '';
+    if (hours > 0) {
+      result += '$hours hr${hours > 1 ? 's' : ''}';
+    }
+    if (mins > 0) {
+      result +=
+          '${result.isNotEmpty ? ' ' : ''}$mins min${mins > 1 ? 's' : ''}';
+    }
+
+    return result.trim().isNotEmpty ? result.trim() : '0 min';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final String currentInput = _controller.text.trim();
+    final bool isCheckDisabled = _isLoading ||
+        widget.checkingDelivery ||
+        currentInput == widget.initialPincode ||
+        currentInput.length < 6;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(24),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E7EB),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Select Delivery Location',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1F2937),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Check Pincode',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF71717A),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: const Color(0xFFFB5404),
+                  width: 1.5,
+                ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      autofocus: true,
+                      buildCounter: (context,
+                              {required currentLength,
+                              required isFocused,
+                              maxLength}) =>
+                          null,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1F2937),
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: 'Enter 6-digit Pincode',
+                        hintStyle: TextStyle(
+                          color: Colors.grey,
+                          fontWeight: FontWeight.normal,
+                        ),
+                        counterText: '',
+                        border: InputBorder.none,
+                        enabledBorder: InputBorder.none,
+                        focusedBorder: InputBorder.none,
+                        errorBorder: InputBorder.none,
+                        disabledBorder: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(vertical: 10),
+                      ),
+                      onChanged: (val) {
+                        setState(() {});
+                      },
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: isCheckDisabled
+                        ? null
+                        : () => _handleCheckPincode(currentInput),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 8),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFFFB5404),
+                              ),
+                            )
+                          : Text(
+                              'Check',
+                              style: TextStyle(
+                                color: isCheckDisabled
+                                    ? const Color(0xFF9CA3AF)
+                                    : const Color(0xFFFB5404),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _isLoading ? null : _handleCurrentLocation,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.my_location,
+                            size: 18,
+                            color: Color(0xFFFB5404),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Current Location',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: _isLoading ? null : _handleSearchLocation,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search,
+                            size: 18,
+                            color: Color(0xFFFB5404),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Search Location',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            if (_loadingAddresses) ...[
+              const SizedBox(height: 16),
+              const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFFB5404),
+                ),
+              ),
+            ] else if (_addresses.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              const Text(
+                'Saved Addresses',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF71717A),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 180),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _addresses.map((addr) {
+                      final bool isSelected = addr['using_this'] == 1 || addr['using_this'] == '1';
+                      final String name = addr['name']?.toString() ?? 'Address';
+                      final String addressText = [
+                        addr['address']?.toString() ?? '',
+                        addr['city']?.toString() ?? '',
+                        addr['state']?.toString() ?? '',
+                        addr['postal_code']?.toString() ?? '',
+                      ].where((s) => s.isNotEmpty).join(', ');
+
+                      return GestureDetector(
+                        onTap: _isLoading
+                            ? null
+                            : () => _selectSavedAddress(Map<String, dynamic>.from(addr)),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? const Color(0xFFFEF2EB) : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isSelected ? const Color(0xFFFB5404) : const Color(0xFFE5E7EB),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
+                                color: isSelected ? const Color(0xFFFB5404) : const Color(0xFF9CA3AF),
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected ? const Color(0xFFFB5404) : const Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      addressText,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
+            
+            // Check result details inside bottom sheet
+            if (_deliveryMessage != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0FDF4), // Light green
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFBBF7D0)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle_outline,
+                        color: Color(0xFF16A34A), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _deliveryMessage!,
+                            style: const TextStyle(
+                              color: Color(0xFF15803D),
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Estimated Delivery ${_formatDeliveryTime(_checkedPincodeDuration)}',
+                            style: const TextStyle(
+                              color: Color(0xFF16A34A),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            if (_errorMessage != null) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2), // Light red
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFEE2E2)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Color(0xFFDC2626), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _errorMessage!,
+                        style: const TextStyle(
+                          color: Color(0xFFB91C1C),
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

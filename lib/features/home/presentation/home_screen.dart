@@ -1037,7 +1037,7 @@ class _HomeScreenState extends State<HomeScreen>
               //       ),
               //     ),
               //   ),
-              if (_currentIndex != 2 && _currentIndex != 3)
+              if (_currentIndex != 2 && _currentIndex != 3 && _currentIndex != 4)
                 ValueListenableBuilder<int>(
                   valueListenable: CartState.cartCountNotifier,
                   builder: (context, cartCount, _) {

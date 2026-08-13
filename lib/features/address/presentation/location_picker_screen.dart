@@ -16,6 +16,7 @@ class LocationPickerScreen extends StatefulWidget {
   final String editPhone;
   final String editAddressDetails;
   final bool forceGPS;
+  final bool pickPincodeOnly;
 
   const LocationPickerScreen({
     super.key,
@@ -27,6 +28,7 @@ class LocationPickerScreen extends StatefulWidget {
     this.editPhone = '',
     this.editAddressDetails = '',
     this.forceGPS = false,
+    this.pickPincodeOnly = false,
   });
 
   @override
@@ -408,6 +410,11 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           content: Text('Pincode is missing. Please select a valid location.'),
         ),
       );
+      return;
+    }
+
+    if (widget.pickPincodeOnly) {
+      Navigator.of(context).pop(pincode);
       return;
     }
 
