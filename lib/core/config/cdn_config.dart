@@ -1,6 +1,6 @@
 class CdnConfig {
-  static const String imageCdn = 'https://d1f02fefkbso7w.cloudfront.net/';
-  static const String videoCdn = 'https://d2plk5mvjwgdxq.cloudfront.net/';
+  static const String imageCdn = 'https://image.welfog.com/';
+  static const String videoCdn = 'https://media.welfog.com/';
 
   static String getImageUrl(String? path) {
     if (path == null || path.trim().isEmpty) return '';

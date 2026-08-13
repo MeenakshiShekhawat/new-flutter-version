@@ -1,3 +1,5 @@
+import 'package:welfog/core/config/cdn_config.dart';
+
 class HomeBanner {
   const HomeBanner({
     required this.image,
@@ -54,8 +56,7 @@ class HomeProduct {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 
