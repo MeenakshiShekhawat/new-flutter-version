@@ -1,8 +1,8 @@
 /// Product/media CDN — matches RN `CDN_BASE_URL` in constants/urlconstants.ts
-const kCdnBaseUrl = 'https://d1f02fefkbso7w.cloudfront.net';
+const kCdnBaseUrl = 'https://image.welfog.com';
 
 /// Video/reels CDN base URL
-const kVideoCdnUrl = 'https://d2plk5mvjwgdxq.cloudfront.net';
+const kVideoCdnUrl = 'https://media.welfog.com';
 
 // https://media.welfog.com/
 // https://image.welfog.com/

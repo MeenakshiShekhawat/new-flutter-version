@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class CategoryWidget extends StatefulWidget {
   final int pullRefreshKey;
@@ -138,7 +139,7 @@ class _CategoryWidgetState extends State<CategoryWidget> {
     }
 
     const String apiUrl = "https://welfogapi.welfog.com/api/nav_cat_data/";
-    const String cdnBase = "https://d1f02fefkbso7w.cloudfront.net/";
+    const String cdnBase = CdnConfig.imageCdn;
 
     try {
       final response = await http.get(Uri.parse(apiUrl));

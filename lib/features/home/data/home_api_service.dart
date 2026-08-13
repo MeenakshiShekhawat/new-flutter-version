@@ -5,11 +5,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'home_models.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class HomeApiService {
   static const String _mainApi = 'https://welfogapi.welfog.com/api/v2';
   static const String _secondApi = 'https://welfogapi.welfog.com/api';
-  static const String _cdnBase = 'https://d1f02fefkbso7w.cloudfront.net/';
+  static const String _cdnBase = CdnConfig.imageCdn;
 
   Future<HomeBundle> fetchHomeBundle() async {
     final prefs = await SharedPreferences.getInstance();

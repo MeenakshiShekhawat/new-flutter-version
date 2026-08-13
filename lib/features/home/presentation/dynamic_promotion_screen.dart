@@ -5,6 +5,7 @@ import 'package:flutter_widget_from_html/flutter_widget_from_html.dart';
 
 import '../../product/data/models/product_item.dart';
 import '../../product/presentation/widgets/product_card.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class DynamicPromotionScreen extends StatefulWidget {
   final String slug;
@@ -74,9 +75,7 @@ class _DynamicPromotionScreenState extends State<DynamicPromotionScreen> {
 
   ProductItem _toProductItem(Map<String, dynamic> p) {
     final imagePath = p['image']?.toString() ?? '';
-    final imageUrl = imagePath.isNotEmpty
-        ? (imagePath.startsWith('http') ? imagePath : 'https://d1f02fefkbso7w.cloudfront.net/$imagePath')
-        : '';
+    final imageUrl = CdnConfig.getImageUrl(imagePath);
 
     final videoLink = (p['video_link'] ?? '').toString().trim();
     String? resolvedVideoUrl;
@@ -86,8 +85,7 @@ class _DynamicPromotionScreenState extends State<DynamicPromotionScreen> {
       if (videoLink.startsWith('http')) {
         resolvedVideoUrl = videoLink;
       } else {
-        resolvedVideoUrl =
-            'https://d2plk5mvjwgdxq.cloudfront.net/videos/reels/$videoLink/master.m3u8';
+        resolvedVideoUrl = CdnConfig.getVideoUrl(videoLink);
       }
     }
 
@@ -406,9 +404,7 @@ class _BannerSliderWidgetState extends State<_BannerSliderWidget> {
             itemBuilder: (context, index) {
               final banner = widget.items[index] as Map<String, dynamic>? ?? {};
               final rawImage = banner['image']?.toString() ?? '';
-              final imageUrl = rawImage.isNotEmpty
-                  ? (rawImage.startsWith('http') ? rawImage : 'https://d1f02fefkbso7w.cloudfront.net/$rawImage')
-                  : '';
+              final imageUrl = CdnConfig.getImageUrl(rawImage);
 
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -7,6 +7,7 @@ import '../../../../core/utils/persistent_image_cache_manager.dart';
 import '../../../../core/widgets/shimmer_loading.dart';
 import '../../../../core/network/axios_instance.dart';
 import '../../../../core/constants/app_routes.dart';
+import 'package:welfog/core/config/cdn_config.dart';
 
 class PromotionSectionItem {
   final int id;
@@ -144,9 +145,7 @@ class _CategoryPromotionWidgetState extends State<CategoryPromotionWidget> {
   }
 
   String _resolveImageUrl(String path) {
-    if (path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return 'https://d1f02fefkbso7w.cloudfront.net/$path';
+    return CdnConfig.getImageUrl(path);
   }
 
   void _handleBannerTap(BuildContext context, String targetUrl) {
@@ -554,9 +553,7 @@ class _PromoSectionSliderState extends State<_PromoSectionSlider> with TickerPro
   }
 
   String _resolveImageUrl(String path) {
-    if (path.isEmpty) return '';
-    if (path.startsWith('http')) return path;
-    return 'https://d1f02fefkbso7w.cloudfront.net/$path';
+    return CdnConfig.getImageUrl(path);
   }
 
   void _handleBannerTap(BuildContext context, String targetUrl) {
