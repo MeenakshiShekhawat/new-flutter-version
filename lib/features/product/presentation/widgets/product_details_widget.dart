@@ -1675,23 +1675,25 @@ class __PincodeBottomSheetContentState
         widget.checkingDelivery ||
         currentInput == widget.initialPincode ||
         currentInput.length < 6;
-
-    final double screenHeight = MediaQuery.of(context).size.height;
+ 
     final double keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
-    final double maxAllowedHeight = keyboardPadding > 0
-        ? (screenHeight - keyboardPadding - 40).clamp(200.0, 450.0)
-        : 450.0;
-    final double sheetMinHeight = keyboardPadding > 0 ? 0.0 : maxAllowedHeight;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: keyboardPadding),
-      child: Stack(
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              minHeight: sheetMinHeight,
-              maxHeight: maxAllowedHeight,
-            ),
+    const double maxAllowedHeight = 440.0;
+ 
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardPadding),
+        child: Stack(
+          children: [
+            Container(
+              constraints: const BoxConstraints(
+                maxHeight: maxAllowedHeight,
+              ),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(
@@ -2114,6 +2116,7 @@ class __PincodeBottomSheetContentState
         ),
     ],
   ),
+),
 );
   }
 }
