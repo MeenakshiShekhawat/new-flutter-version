@@ -21,7 +21,7 @@ class _AccountScreenState extends State<AccountScreen> {
   int? _wishlistCount;
   int? _ordersCount;
   int? _cartCount;
-  bool _playRouteOpening = false;
+  bool _isNavigating = false;
   // Pre-warmed authenticated Play route — built eagerly when tab becomes
   // active so the first tap navigates instantly without an async wait.
   String? _prewarmedPlayRoute;
@@ -204,10 +204,8 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Future<void> _openPlayRoute(String routeName) async {
-    if (_playRouteOpening) return;
-    // setState immediately so the UI shows a loading state on the tapped item
-    // before any async work begins — prevents the "first tap feels dropped" UX.
-    setState(() => _playRouteOpening = true);
+    if (_isNavigating) return;
+    _isNavigating = true;
     try {
       // Use pre-warmed route if available (built when tab became active),
       // otherwise fall back to async build. The pre-warm eliminates the
@@ -222,16 +220,20 @@ class _AccountScreenState extends State<AccountScreen> {
         RouteSettings(name: routeWithSession),
       );
       if (route == null) {
+        _isNavigating = false;
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Play module route unavailable')),
         );
         return;
       }
-      if (!mounted) return;
+      if (!mounted) {
+        _isNavigating = false;
+        return;
+      }
       await Navigator.of(context).push(route);
     } finally {
-      if (mounted) setState(() => _playRouteOpening = false);
+      _isNavigating = false;
     }
   }
 
@@ -615,9 +617,6 @@ class _AccountScreenState extends State<AccountScreen> {
   }
 
   Widget _buildMenuRow(_MenuItem m) {
-    final bool isPlayItem = m.keyName == 'playProfile';
-    final bool showSpinner = isPlayItem && _playRouteOpening;
-
     return InkWell(
       onTap: () => _onMenuTap(m),
       child: Padding(
@@ -632,17 +631,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 color: m.bg,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: showSpinner
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor:
-                            AlwaysStoppedAnimation<Color>(Color(0xFFFB5404)),
-                      ),
-                    )
-                  : Icon(m.icon, size: 19, color: m.tint),
+              child: Icon(m.icon, size: 19, color: m.tint),
             ),
             const SizedBox(width: 14),
             Expanded(

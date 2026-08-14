@@ -37,6 +37,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
   bool _checkingDelivery = false;
   String _lastCheckedPin = '';
   dynamic _checkedPincodeDuration;
+  bool _isBottomSheetOpen = false;
 
   int _apiTotalReviews = 0;
   double _apiRating = 0.0;
@@ -122,22 +123,30 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
     }
   }
 
-  Future<Map<String, dynamic>> _checkDelivery(String pin) async {
+  Future<Map<String, dynamic>> _checkDelivery(String pin, {bool fromSheet = false}) async {
     if (pin.trim().isEmpty) {
-      setState(() {
-        _errorMessage = 'Please enter a pincode first.';
-        _deliveryMessage = '';
-      });
+      if (!fromSheet || _isBottomSheetOpen) {
+        setState(() {
+          _errorMessage = 'Please enter a pincode first.';
+          _deliveryMessage = '';
+        });
+      }
       return {
         'success': false,
         'message': 'Please enter a pincode first.',
       };
     }
 
-    setState(() {
-      _checkingDelivery = true;
-      _lastCheckedPin = pin;
-    });
+    if (!fromSheet || _isBottomSheetOpen) {
+      setState(() {
+        _checkingDelivery = true;
+        _lastCheckedPin = pin;
+      });
+    } else {
+      setState(() {
+        _checkingDelivery = true;
+      });
+    }
 
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -199,27 +208,42 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        if (data['result'] == true && mounted) {
-          final String msg = data['message'] ?? 'Product available for delivery';
+        if (data['result'] == true) {
+          String msg =
+              data['message'] ?? 'Product available for delivery';
+          msg = msg.trim();
+          if (msg.endsWith('!')) {
+            msg = msg.substring(0, msg.length - 1).trim();
+          }
           final duration = data['duration'] ?? data['data']?['duration'];
-          setState(() {
-            _deliveryMessage = msg;
-            _errorMessage = '';
-            _checkedPincodeDuration = duration;
-          });
+          if (!fromSheet || _isBottomSheetOpen) {
+            if (mounted) {
+              setState(() {
+                _lastCheckedPin = pin;
+                _deliveryMessage = msg;
+                _errorMessage = '';
+                _checkedPincodeDuration = duration;
+              });
+            }
+          }
           return {
             'success': true,
             'message': msg,
             'duration': duration,
           };
         } else {
-          setState(() {
-            _errorMessage = 'Delivery not available to';
-            _deliveryMessage = '';
-            _checkedPincodeDuration = null;
-          });
-          if (mounted) {
-            TopToast.show(context, 'Delivery not available to $pin');
+          if (!fromSheet || _isBottomSheetOpen) {
+            if (mounted) {
+              setState(() {
+                _lastCheckedPin = pin;
+                _errorMessage = 'Delivery not available to';
+                _deliveryMessage = '';
+                _checkedPincodeDuration = null;
+              });
+            }
+            if (mounted) {
+              TopToast.show(context, 'Delivery not available to $pin');
+            }
           }
           return {
             'success': false,
@@ -227,13 +251,18 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
           };
         }
       } else {
-        setState(() {
-          _errorMessage = 'Delivery not available to';
-          _deliveryMessage = '';
-          _checkedPincodeDuration = null;
-        });
-        if (mounted) {
-          TopToast.show(context, 'Delivery not available to $pin');
+        if (!fromSheet || _isBottomSheetOpen) {
+          if (mounted) {
+            setState(() {
+              _lastCheckedPin = pin;
+              _errorMessage = 'Delivery not available to';
+              _deliveryMessage = '';
+              _checkedPincodeDuration = null;
+            });
+          }
+          if (mounted) {
+            TopToast.show(context, 'Delivery not available to $pin');
+          }
         }
         return {
           'success': false,
@@ -241,13 +270,18 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
         };
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'Delivery not available to';
-        _deliveryMessage = '';
-        _checkedPincodeDuration = null;
-      });
-      if (mounted) {
-        TopToast.show(context, 'Delivery not available to $pin');
+      if (!fromSheet || _isBottomSheetOpen) {
+        if (mounted) {
+          setState(() {
+            _lastCheckedPin = pin;
+            _errorMessage = 'Delivery not available to';
+            _deliveryMessage = '';
+            _checkedPincodeDuration = null;
+          });
+        }
+        if (mounted) {
+          TopToast.show(context, 'Delivery not available to $pin');
+        }
       }
       return {
         'success': false,
@@ -696,7 +730,8 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                               _checkingDelivery ? 'Checking...' : 'Apply',
                               style: TextStyle(
                                 color: isCheckDisabled
-                                    ? const Color(0xFF9CA3AF) // Muted text color
+                                    ? const Color(
+                                        0xFF9CA3AF) // Muted text color
                                     : const Color(0xFFFB5404),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 15,
@@ -778,6 +813,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                           ],
                         ),
                       ),
+                      const SizedBox(width: 12),
                       GestureDetector(
                         onTap: () => _openPincodeBottomSheet(context),
                         child: Container(
@@ -785,8 +821,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                               horizontal: 16, vertical: 6),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: const Color(0xFFFB5404)),
+                            border: Border.all(color: const Color(0xFFFB5404)),
                           ),
                           child: const Text(
                             'Change',
@@ -802,27 +837,70 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
                   ),
                 ),
                 if (_deliveryMessage.isNotEmpty) ...[
-                  const SizedBox(
-                      height: 6), // slightly increased vertical space
+                  const SizedBox(height: 10),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 6), // slightly increased vertical padding
-                    color: Colors.transparent,
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF0FDF4), // Light green
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFBBF7D0)),
+                    ),
                     child: Row(
                       children: [
-                        const Icon(
-                          Icons.local_shipping_outlined,
-                          color: Color(0xFFFB5404),
-                          size: 18,
+                        const Icon(Icons.check_circle_outline,
+                            color: Color(0xFF16A34A), size: 20),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _deliveryMessage,
+                                style: const TextStyle(
+                                  color: Color(0xFF15803D),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Estimated Delivery ${_formatDeliveryTime(_checkedPincodeDuration ?? widget.data['shop_location']?['duration'] ?? widget.data['duration'] ?? widget.data['data']?['duration'] ?? widget.data['product']?['shop_location']?['duration'] ?? widget.data['product']?['duration'])}',
+                                style: const TextStyle(
+                                  color: Color(0xFF16A34A),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        const SizedBox(width: 8),
+                      ],
+                    ),
+                  ),
+                ],
+                if (_errorMessage.isNotEmpty && _lastCheckedPin.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF2F2), // Light red
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFFEE2E2)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline,
+                            color: Color(0xFFDC2626), size: 20),
+                        const SizedBox(width: 10),
                         Expanded(
                           child: Text(
-                            'Estimated Delivery ${_formatDeliveryTime(_checkedPincodeDuration ?? widget.data['shop_location']?['duration'] ?? widget.data['duration'] ?? widget.data['data']?['duration'] ?? widget.data['product']?['shop_location']?['duration'] ?? widget.data['product']?['duration'])}',
+                            '$_errorMessage $_lastCheckedPin',
                             style: const TextStyle(
-                              color: Color(0xFF15803D), // green color
-                              fontWeight: FontWeight.w500, // less bold
+                              color: Color(0xFFB91C1C),
                               fontSize: 14,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -1244,6 +1322,7 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
   }
 
   void _openPincodeBottomSheet(BuildContext context) {
+    _isBottomSheetOpen = true;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1251,9 +1330,11 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
       builder: (context) => _PincodeBottomSheetContent(
         initialPincode: _lastCheckedPin,
         checkingDelivery: _checkingDelivery,
-        onApply: (pin) => _checkDelivery(pin),
+        onApply: (pin) => _checkDelivery(pin, fromSheet: true),
       ),
-    );
+    ).then((_) {
+      _isBottomSheetOpen = false;
+    });
   }
 }
 
@@ -1292,7 +1373,15 @@ class __PincodeBottomSheetContentState
     super.initState();
     _controller = TextEditingController(text: widget.initialPincode);
     _controller.addListener(_onTextChanged);
-    _fetchAddresses();
+    
+    // Delay address fetching until the bottom sheet opening transition completes.
+    // This prevents layout rebuilds from clashing with the slide-up animation,
+    // eliminating any animation jank or "middle-pause" lag.
+    Future.delayed(const Duration(milliseconds: 350), () {
+      if (mounted) {
+        _fetchAddresses();
+      }
+    });
   }
 
   void _onTextChanged() {
@@ -1415,11 +1504,23 @@ class __PincodeBottomSheetContentState
       if (mounted) {
         setState(() {
           if (result['success'] == true) {
-            _deliveryMessage = result['message'] ?? 'Product available for delivery';
+            String msg =
+                result['message'] ?? 'Product available for delivery';
+            msg = msg.trim();
+            if (msg.endsWith('!')) {
+              msg = msg.substring(0, msg.length - 1).trim();
+            }
+            _deliveryMessage = msg;
             _checkedPincodeDuration = result['duration'];
             _errorMessage = null;
           } else {
-            _errorMessage = result['message'] ?? 'Delivery not available to $pin';
+            String errMsg =
+                result['message'] ?? 'Delivery not available to $pin';
+            errMsg = errMsg.trim();
+            if (errMsg.endsWith('!')) {
+              errMsg = errMsg.substring(0, errMsg.length - 1).trim();
+            }
+            _errorMessage = errMsg;
             _deliveryMessage = null;
           }
         });
@@ -1472,7 +1573,8 @@ class __PincodeBottomSheetContentState
       if (permission == LocationPermission.deniedForever) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Location permission permanently denied. Enable in settings.';
+          _errorMessage =
+              'Location permission permanently denied. Enable in settings.';
         });
         return;
       }
@@ -1598,52 +1700,66 @@ class __PincodeBottomSheetContentState
         currentInput == widget.initialPincode ||
         currentInput.length < 6;
 
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
+    final double maxAllowedHeight = keyboardPadding > 0
+        ? (screenHeight - keyboardPadding - 40).clamp(200.0, 450.0)
+        : 450.0;
+    final double sheetMinHeight = keyboardPadding > 0 ? 0.0 : maxAllowedHeight;
+
     return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(24),
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE5E7EB),
-                  borderRadius: BorderRadius.circular(2),
+      padding: EdgeInsets.only(bottom: keyboardPadding),
+      child: Stack(
+        children: [
+          Container(
+            constraints: BoxConstraints(
+              minHeight: sheetMinHeight,
+              maxHeight: maxAllowedHeight,
+            ),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(24),
+              ),
+            ),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Select Delivery Location',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1F2937),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: const Icon(
+                      Icons.close,
+                      color: Color(0xFF4B5563),
+                      size: 22,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Check Pincode',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF71717A),
                 ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Select Delivery Location',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1F2937),
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'Check Pincode',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF71717A),
-              ),
-            ),
-            const SizedBox(height: 6),
-            Container(
+              const SizedBox(height: 6),
+              Container(
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
@@ -1721,171 +1837,10 @@ class __PincodeBottomSheetContentState
                 ],
               ),
             ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: InkWell(
-                    onTap: _isLoading ? null : _handleCurrentLocation,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.my_location,
-                            size: 18,
-                            color: Color(0xFFFB5404),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Current Location',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1F2937),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: InkWell(
-                    onTap: _isLoading ? null : _handleSearchLocation,
-                    borderRadius: BorderRadius.circular(12),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.search,
-                            size: 18,
-                            color: Color(0xFFFB5404),
-                          ),
-                          SizedBox(width: 8),
-                          Text(
-                            'Search Location',
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF1F2937),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
 
-            if (_loadingAddresses) ...[
-              const SizedBox(height: 16),
-              const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFFB5404),
-                ),
-              ),
-            ] else if (_addresses.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              const Text(
-                'Saved Addresses',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF71717A),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 180),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children: _addresses.map((addr) {
-                      final bool isSelected = addr['using_this'] == 1 || addr['using_this'] == '1';
-                      final String name = addr['name']?.toString() ?? 'Address';
-                      final String addressText = [
-                        addr['address']?.toString() ?? '',
-                        addr['city']?.toString() ?? '',
-                        addr['state']?.toString() ?? '',
-                        addr['postal_code']?.toString() ?? '',
-                      ].where((s) => s.isNotEmpty).join(', ');
-
-                      return GestureDetector(
-                        onTap: _isLoading
-                            ? null
-                            : () => _selectSavedAddress(Map<String, dynamic>.from(addr)),
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? const Color(0xFFFEF2EB) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isSelected ? const Color(0xFFFB5404) : const Color(0xFFE5E7EB),
-                              width: isSelected ? 1.5 : 1,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                                color: isSelected ? const Color(0xFFFB5404) : const Color(0xFF9CA3AF),
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      name,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.bold,
-                                        color: isSelected ? const Color(0xFFFB5404) : const Color(0xFF1F2937),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      addressText,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF6B7280),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ),
-            ],
-            
-            // Check result details inside bottom sheet
+            // Check result details inside bottom sheet (placed directly below the text field)
             if (_deliveryMessage != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -1928,7 +1883,7 @@ class __PincodeBottomSheetContentState
               ),
             ],
             if (_errorMessage != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
@@ -1956,9 +1911,247 @@ class __PincodeBottomSheetContentState
                 ),
               ),
             ],
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: _isLoading ? null : _handleCurrentLocation,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.my_location,
+                            size: 18,
+                            color: Color(0xFFFB5404),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Current Location',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: _isLoading ? null : _handleSearchLocation,
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search,
+                            size: 18,
+                            color: Color(0xFFFB5404),
+                          ),
+                          SizedBox(width: 8),
+                          Text(
+                            'Search Location',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF1F2937),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            if (_loadingAddresses || _addresses.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Divider(
+                      color: Color(0xFFE5E7EB),
+                      thickness: 1,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Text(
+                      'or',
+                      style: TextStyle(
+                        color: Colors.grey.shade400,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const Expanded(
+                    child: Divider(
+                      color: Color(0xFFE5E7EB),
+                      thickness: 1,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            if (_loadingAddresses) ...[
+              const SizedBox(height: 8),
+              const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Color(0xFFFB5404),
+                ),
+              ),
+            ] else if (_addresses.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text(
+                ' Select Saved Addresses',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF71717A),
+                ),
+              ),
+              const SizedBox(height: 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 180),
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _addresses.map((addr) {
+                      final bool isSelected =
+                          addr['using_this'] == 1 || addr['using_this'] == '1';
+                      final String name = addr['name']?.toString() ?? 'Address';
+                      final String addressText = [
+                        addr['address']?.toString() ?? '',
+                        addr['city']?.toString() ?? '',
+                        addr['state']?.toString() ?? '',
+                        addr['postal_code']?.toString() ?? '',
+                      ].where((s) => s.isNotEmpty).join(', ');
+
+                      return GestureDetector(
+                        onTap: _isLoading
+                            ? null
+                            : () => _selectSavedAddress(
+                                Map<String, dynamic>.from(addr)),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: const Color(0xFFE5E7EB),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 22,
+                                height: 22,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isSelected
+                                      ? const Color(0xFFFB5404)
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? const Color(0xFFFB5404)
+                                        : const Color(0xFFD1D5DB),
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isSelected
+                                    ? const Center(
+                                        child: Icon(
+                                          Icons.check,
+                                          color: Colors.white,
+                                          size: 14,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      name,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.bold,
+                                        color: isSelected
+                                            ? const Color(0xFFFB5404)
+                                            : const Color(0xFF1F2937),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      addressText,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF6B7280),
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
-    );
+    ),
+      if (_isLoading)
+        Positioned.fill(
+          child: AbsorbPointer(
+            absorbing: true,
+            child: Container(
+              decoration: const BoxDecoration(
+                color: Colors.white70,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              child: const Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFFFB5404),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  ),
+);
   }
 }
