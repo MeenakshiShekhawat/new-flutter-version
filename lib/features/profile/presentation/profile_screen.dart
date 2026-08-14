@@ -54,7 +54,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _dobCtrl.dispose();
     super.dispose();
   }
-// both dropdown is fixed (date of birth and marital status)
   // Keeps the avatar initial in sync as the person edits their name.
   void _onNameChanged() {
     if (mounted) setState(() {});
