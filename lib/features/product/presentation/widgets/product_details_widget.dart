@@ -925,57 +925,33 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
           ],
 
           // Pincode check responses (outside)
-          if (_checkingDelivery ||
-              (_errorMessage.isNotEmpty && _lastCheckedPin.isEmpty))
+          if (_errorMessage.isNotEmpty && _lastCheckedPin.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 6),
-              child: _checkingDelivery
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFD1D5DB)),
-                      ),
-                      child: const Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Color(0xFFFB5404)),
-                          ),
-                          SizedBox(width: 8),
-                          Text('Checking pincode...',
-                              style: TextStyle(color: Color(0xFF4B5563))),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.red.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error,
-                              color: Colors.red.shade600, size: 18),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _errorMessage,
-                              style: TextStyle(
-                                  color: Colors.red.shade600,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error,
+                        color: Colors.red.shade600, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _errorMessage,
+                        style: TextStyle(
+                            color: Colors.red.shade600,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
+                  ],
+                ),
+              ),
             ),
 
           // Variants Section
@@ -1366,7 +1342,7 @@ class __PincodeBottomSheetContentState
 
   // Local state for user saved addresses
   List<dynamic> _addresses = [];
-  bool _loadingAddresses = false;
+  bool _loadingAddresses = true;
 
   @override
   void initState() {
@@ -1776,7 +1752,7 @@ class __PincodeBottomSheetContentState
                       controller: _controller,
                       keyboardType: TextInputType.number,
                       maxLength: 6,
-                      autofocus: true,
+                      autofocus: false,
                       buildCounter: (context,
                               {required currentLength,
                               required isFocused,
@@ -1813,25 +1789,16 @@ class __PincodeBottomSheetContentState
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           vertical: 10, horizontal: 8),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFFFB5404),
-                              ),
-                            )
-                          : Text(
-                              'Check',
-                              style: TextStyle(
-                                color: isCheckDisabled
-                                    ? const Color(0xFF9CA3AF)
-                                    : const Color(0xFFFB5404),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
+                      child: Text(
+                        'Check',
+                        style: TextStyle(
+                          color: isCheckDisabled
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFFFB5404),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -2015,12 +1982,7 @@ class __PincodeBottomSheetContentState
 
             if (_loadingAddresses) ...[
               const SizedBox(height: 8),
-              const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFFB5404),
-                ),
-              ),
+              const SizedBox(height: 36), // Empty space placeholder to prevent layout jumping
             ] else if (_addresses.isNotEmpty) ...[
               const SizedBox(height: 8),
               const Text(
@@ -2131,7 +2093,7 @@ class __PincodeBottomSheetContentState
         ),
       ),
     ),
-      if (_isLoading)
+      if (_isLoading || _loadingAddresses)
         Positioned.fill(
           child: AbsorbPointer(
             absorbing: true,
