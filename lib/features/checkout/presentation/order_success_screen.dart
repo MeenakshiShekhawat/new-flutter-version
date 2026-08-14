@@ -258,7 +258,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen>
                       ),
                     ),
                   ),
-
+// added navigation to support ..  
                   // ===== Bottom actions =====
                   FadeTransition(
                     opacity: _fade(0.42),
