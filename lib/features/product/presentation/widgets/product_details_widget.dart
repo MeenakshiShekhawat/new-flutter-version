@@ -925,57 +925,33 @@ class _ProductDetailsWidgetState extends State<ProductDetailsWidget> {
           ],
 
           // Pincode check responses (outside)
-          if (_checkingDelivery ||
-              (_errorMessage.isNotEmpty && _lastCheckedPin.isEmpty))
+          if (_errorMessage.isNotEmpty && _lastCheckedPin.isEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4, bottom: 6),
-              child: _checkingDelivery
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFFD1D5DB)),
-                      ),
-                      child: const Row(
-                        children: [
-                          SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Color(0xFFFB5404)),
-                          ),
-                          SizedBox(width: 8),
-                          Text('Checking pincode...',
-                              style: TextStyle(color: Color(0xFF4B5563))),
-                        ],
-                      ),
-                    )
-                  : Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.red.shade300),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.error,
-                              color: Colors.red.shade600, size: 18),
-                          const SizedBox(width: 6),
-                          Expanded(
-                            child: Text(
-                              _errorMessage,
-                              style: TextStyle(
-                                  color: Colors.red.shade600,
-                                  fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.error,
+                        color: Colors.red.shade600, size: 18),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _errorMessage,
+                        style: TextStyle(
+                            color: Colors.red.shade600,
+                            fontWeight: FontWeight.w600),
                       ),
                     ),
+                  ],
+                ),
+              ),
             ),
 
           // Variants Section
@@ -1366,7 +1342,7 @@ class __PincodeBottomSheetContentState
 
   // Local state for user saved addresses
   List<dynamic> _addresses = [];
-  bool _loadingAddresses = false;
+  bool _loadingAddresses = true;
 
   @override
   void initState() {
@@ -1699,23 +1675,25 @@ class __PincodeBottomSheetContentState
         widget.checkingDelivery ||
         currentInput == widget.initialPincode ||
         currentInput.length < 6;
-
-    final double screenHeight = MediaQuery.of(context).size.height;
+ 
     final double keyboardPadding = MediaQuery.of(context).viewInsets.bottom;
-    final double maxAllowedHeight = keyboardPadding > 0
-        ? (screenHeight - keyboardPadding - 40).clamp(200.0, 450.0)
-        : 450.0;
-    final double sheetMinHeight = keyboardPadding > 0 ? 0.0 : maxAllowedHeight;
-
-    return Padding(
-      padding: EdgeInsets.only(bottom: keyboardPadding),
-      child: Stack(
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              minHeight: sheetMinHeight,
-              maxHeight: maxAllowedHeight,
-            ),
+    const double maxAllowedHeight = 440.0;
+ 
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          FocusManager.instance.primaryFocus?.unfocus();
+        }
+      },
+      child: Padding(
+        padding: EdgeInsets.only(bottom: keyboardPadding),
+        child: Stack(
+          children: [
+            Container(
+              constraints: const BoxConstraints(
+                maxHeight: maxAllowedHeight,
+              ),
             decoration: const BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.vertical(
@@ -1776,7 +1754,7 @@ class __PincodeBottomSheetContentState
                       controller: _controller,
                       keyboardType: TextInputType.number,
                       maxLength: 6,
-                      autofocus: true,
+                      autofocus: false,
                       buildCounter: (context,
                               {required currentLength,
                               required isFocused,
@@ -1813,25 +1791,16 @@ class __PincodeBottomSheetContentState
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                           vertical: 10, horizontal: 8),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Color(0xFFFB5404),
-                              ),
-                            )
-                          : Text(
-                              'Check',
-                              style: TextStyle(
-                                color: isCheckDisabled
-                                    ? const Color(0xFF9CA3AF)
-                                    : const Color(0xFFFB5404),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
+                      child: Text(
+                        'Check',
+                        style: TextStyle(
+                          color: isCheckDisabled
+                              ? const Color(0xFF9CA3AF)
+                              : const Color(0xFFFB5404),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -2015,12 +1984,7 @@ class __PincodeBottomSheetContentState
 
             if (_loadingAddresses) ...[
               const SizedBox(height: 8),
-              const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: Color(0xFFFB5404),
-                ),
-              ),
+              const SizedBox(height: 36), // Empty space placeholder to prevent layout jumping
             ] else if (_addresses.isNotEmpty) ...[
               const SizedBox(height: 8),
               const Text(
@@ -2131,7 +2095,7 @@ class __PincodeBottomSheetContentState
         ),
       ),
     ),
-      if (_isLoading)
+      if (_isLoading || _loadingAddresses)
         Positioned.fill(
           child: AbsorbPointer(
             absorbing: true,
@@ -2152,6 +2116,7 @@ class __PincodeBottomSheetContentState
         ),
     ],
   ),
+),
 );
   }
 }

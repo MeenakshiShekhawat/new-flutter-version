@@ -424,12 +424,12 @@ class _OtherProfileScreenState extends State<OtherProfileScreen>
             onPressed: _handleBack,
           ),
           actions: [
-            if (!isSelf && _profile != null)
-              IconButton(
-                icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1A1A1A)),
-                tooltip: 'Chat',
-                onPressed: () => _openChatWithUser(context),
-              ),
+            // if (!isSelf && _profile != null)
+            //   IconButton(
+            //     icon: const Icon(Icons.chat_bubble_outline_rounded, color: Color(0xFF1A1A1A)),
+            //     tooltip: 'Chat',
+            //     onPressed: () => _openChatWithUser(context),
+            //   ),
             if (!isSelf && _profile != null)
               IconButton(
                   icon: const Icon(Icons.more_vert),
@@ -527,10 +527,10 @@ class _OtherProfileScreenState extends State<OtherProfileScreen>
     );
   }
 
-  void _openChatWithUser(BuildContext context) {
-    final targetId = _profile?.id ?? widget.userId;
-    Navigator.pushNamed(context, '/chat-room', arguments: {'targetUserId': targetId});
-  }
+  // void _openChatWithUser(BuildContext context) {
+  //   final targetId = _profile?.id ?? widget.userId;
+  //   Navigator.pushNamed(context, '/chat-room', arguments: {'targetUserId': targetId});
+  // }
 
   Widget _errorView() {
     return Center(

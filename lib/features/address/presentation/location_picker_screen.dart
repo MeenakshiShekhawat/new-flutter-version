@@ -154,7 +154,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('Using last known location due to weak GPS signal.'),
+                content:
+                    Text('Using last known location due to weak GPS signal.'),
               ),
             );
           }
@@ -280,7 +281,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           final displayArea = components['area']!.isNotEmpty
               ? components['area']!
               : components['city']!;
+          final streetDetails = components['street_details'] ?? '';
           final cleanDisplayAddress = [
+            if (streetDetails.isNotEmpty) streetDetails,
             displayArea,
             components['city'],
             components['state'],
@@ -329,9 +332,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         : (district.isNotEmpty ? district : tehsil);
 
     final sublocality = getComponent('sublocality_level_1');
-    final sublocality2 = getComponent('sublocality');
+    final sublocality2 = getComponent('sublocality_level_2');
     final neighborhood = getComponent('neighborhood');
     final route = getComponent('route');
+    final streetNumber = getComponent('street_number');
+    final premise = getComponent('premise');
+    final subpremise = getComponent('subpremise');
 
     final area = sublocality.isNotEmpty
         ? sublocality
@@ -341,12 +347,26 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 ? neighborhood
                 : (route.isNotEmpty ? route : locality)));
 
+    // Construct detailed street line/building block
+    final buildingBlock = [
+      subpremise,
+      premise,
+      streetNumber,
+    ].where((s) => s.isNotEmpty).join(", ");
+
+    final streetBlock = [
+      buildingBlock,
+      route,
+      if (sublocality.isEmpty && sublocality2.isNotEmpty) sublocality2,
+    ].where((s) => s.isNotEmpty).join(", ");
+
     return {
       'pincode': pincode,
       'country': country,
       'state': state,
       'city': city,
       'area': area,
+      'street_details': streetBlock,
     };
   }
 
@@ -389,6 +409,9 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        debugPrint('GOOGLE MAPS PLACE DETAILS RESPONSE START ==============');
+        debugPrint(const JsonEncoder.withIndent('  ').convert(data));
+        debugPrint('GOOGLE MAPS PLACE DETAILS RESPONSE END ================');
         if (data['status'] == 'OK' &&
             data['result']?['geometry']?['location'] != null) {
           final location = data['result']['geometry']['location'];
